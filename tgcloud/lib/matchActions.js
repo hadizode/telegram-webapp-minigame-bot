@@ -1,0 +1,71 @@
+import { isAdmin } from './config.js';
+import { acquireLock } from './lock.js';
+import { send } from './tg.js';
+import { upsertUser } from './users.js';
+import { getMatch, setStatus } from './matches.js';
+import { addPlayer, countActive, deactivate, getActive } from './players.js';
+import { computeStatus } from './capacity.js';
+import { refreshCard, unpinCard } from './cards.js';
+import { onMatchStart } from './gameEngine.js';
+import { api } from 'sdk';
+
+// Shared by /forcematch and the start button.
+export async function startMatch(match, notReadyText) {
+  await setStatus(match.id, 'running');
+  await unpinCard(match);
+  await refreshCard(match.id);
+  try {
+    await onMatchStart(match.id);
+  } catch (e) {
+    console.error('onMatchStart failed', e.message);
+    await send(match.groupId, notReadyText);
+  }
+}
+
+// c = { chatId, from }
+async function join(c, id) {
+  const match = await getMatch(id);
+  if (!match || match.status !== 'open') return send(c.chatId, 'این مچ دیگه باز نیست');
+  const member = await api.getChatMember({ chat_id: match.groupId, user_id: c.from.id });
+  if (['left', 'kicked'].includes(member.status)) return send(c.chatId, 'اول باید عضو گروه باشی');
+  const user = await upsertUser(c.from);
+  if (await getActive(id, user.id)) return;
+  if ((await countActive(id)) >= match.maxPlayers) return send(c.chatId, 'ظرفیت پره');
+  await addPlayer(id, user.id);
+  const status = computeStatus(await countActive(id), match.maxPlayers);
+  if (status === 'full') await setStatus(id, 'full');
+  await refreshCard(id);
+  if (status === 'full') await send(match.groupId, '✅ همه حاضرن! ادمین شروع کنه.');
+}
+
+async function leave(c, id) {
+  const match = await getMatch(id);
+  if (!match || match.status !== 'open') return;
+  const user = await upsertUser(c.from);
+  if (!(await getActive(id, user.id))) return;
+  await deactivate(id, user.id);
+  await refreshCard(id);
+}
+
+async function start(c, id) {
+  if (!isAdmin(c.from.id)) return send(c.chatId, 'اجازه نداری');
+  const match = await getMatch(id);
+  if (!match || match.status !== 'full') return;
+  return startMatch(match, 'موتور بازی هنوز آماده نیست');
+}
+
+const actions = { join, leave, start };
+
+export async function handleMatchAction(c, action, id) {
+  let release;
+  try {
+    release = await acquireLock(`match:${id}`, 3000);
+  } catch {
+    return send(c.chatId, 'یه لحظه صبر کن و دوباره بزن');
+  }
+  try {
+    return await actions[action](c, id);
+  } finally {
+    await release();
+  }
+}
