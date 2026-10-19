@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Escape Room Bot — Telegram Serverless (tgcloud) foundation
 
 ## Setup
@@ -31,3 +32,7 @@ Add the Telegram id to `ADMIN_IDS` in `tgcloud/lib/config.js`, then `npx tgcloud
 | /forcematch | admin | group | force start (needs min players) |
 
 Game engine is a placeholder: `tgcloud/lib/gameEngine.js`.
+=======
+# telegram-webapp-minigame-bot
+badan
+>>>>>>> 3f8af82b0fef205c857676e98ca7d9564661a37b
