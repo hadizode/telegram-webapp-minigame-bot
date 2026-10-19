@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>تست مینی‌اپ</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b0f1a; color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; }
+  #scene { position: fixed; inset: 0; }
+  #scene svg { width: 100%; height: 100%; display: block; }
+  .hotspot { cursor: pointer; }
+  .hotspot:active { opacity: .6; }
+  #hud { position: fixed; top: 0; left: 0; right: 0; padding: calc(env(safe-area-inset-top, 0px) + 10px) 14px 10px;
+    background: linear-gradient(#000a, transparent); display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+  #timer { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 20px; }
+  #log { position: fixed; bottom: 0; left: 0; right: 0; padding: 10px 14px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    background: linear-gradient(transparent, #000c); font-size: 13px; line-height: 1.7; white-space: pre-wrap; direction: ltr; text-align: left; }
+</style>
+</head>
+<body>
+<div id="scene">
+  <svg viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#1b2a49"/><stop offset="1" stop-color="#3a1c3f"/>
+      </linearGradient>
+    </defs>
+    <rect width="400" height="800" fill="url(#bg)"/>
+    <rect x="40" y="260" width="320" height="400" fill="#2a2238" stroke="#554a6b" stroke-width="4"/>
+    <rect x="150" y="380" width="100" height="200" rx="6" fill="#6b4a2e" stroke="#c89b6a" stroke-width="3"/>
+    <circle cx="232" cy="485" r="7" fill="#f2c94c"/>
+    <g class="hotspot" id="key">
+      <circle cx="90" cy="600" r="26" fill="#f2c94c" opacity=".9"/>
+      <text x="90" y="608" font-size="26" text-anchor="middle">🗝</text>
+    </g>
+    <g class="hotspot" id="lamp">
+      <circle cx="310" cy="330" r="26" fill="#56ccf2" opacity=".9"/>
+      <text x="310" y="338" font-size="26" text-anchor="middle">💡</text>
+    </g>
+  </svg>
+</div>
+<div id="hud"><span id="who">…</span><span id="timer">15:00</span></div>
+<div id="log">در حال اتصال…</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
+
+const logEl = document.getElementById('log');
+const lines = [];
+function log(s) { lines.push(s); logEl.textContent = lines.slice(-6).join('\n'); }
+
+log('platform: ' + tg.platform + ' | version: ' + tg.version);
+log('start_param (client): ' + (tg.initDataUnsafe.start_param || '-'));
+document.getElementById('who').textContent = (tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name) || 'ناشناس';
+
+let offset = 0, deadline = null;
+function call(input) {
+  return new Promise((resolve, reject) => {
+    tg.Serverless.call('ping', input, (err, res) => err ? reject(err) : resolve(res));
+  });
+}
+
+async function ping(tap) {
+  const t0 = Date.now();
+  const r = await call({ tap });
+  const rtt = Date.now() - t0;
+  offset = r.serverTime - (t0 + rtt / 2);
+  log('server OK | user=' + r.user.id + ' | start_param=' + r.startParam + ' | chat=' + r.chatType + ' | rtt=' + rtt + 'ms | clock offset=' + Math.round(offset) + 'ms');
+  return r;
+}
+
+ping(null).then(() => {
+  deadline = Date.now() + offset + 15 * 60 * 1000; // server-based clock
+  setInterval(() => {
+    const left = Math.max(0, Math.round((deadline - (Date.now() + offset)) / 1000));
+    document.getElementById('timer').textContent =
+      String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0');
+  }, 250);
+}).catch((e) => log('SERVER ERROR: ' + (e.message || JSON.stringify(e))));
+
+for (const id of ['key', 'lamp']) {
+  document.getElementById(id).addEventListener('click', () => {
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    ping(id).catch((e) => log('SERVER ERROR: ' + (e.message || JSON.stringify(e))));
+  });
+}
+</script>
+</body>
+</html>

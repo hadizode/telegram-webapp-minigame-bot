@@ -9,6 +9,7 @@ import { getPack } from './packLoader.js';
 import { unpinCard } from './cards.js';
 import { startMatch } from './matchActions.js';
 import { begin } from './wizard.js';
+import { testapp } from './testapp.js';
 
 const LINE = '━━━━━━━━━━━━━━━━';
 
@@ -119,7 +120,7 @@ async function forcematch(msg) {
 }
 
 export const COMMANDS = {
-  start, help, profile, ranklist,
+  start, help, profile, ranklist,testapp,
   newmatch: guard({ group: true, admin: true }, begin),
   cancelmatch: guard({ group: true, admin: true }, cancelmatch),
   forcematch: guard({ group: true, admin: true }, forcematch),

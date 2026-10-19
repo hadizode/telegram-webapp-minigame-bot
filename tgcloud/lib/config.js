@@ -1,0 +1,3 @@
+// Short name of the Mini App as registered in @BotFather (/newapp).
+// Leave '' to use the bot's *main* Mini App link: https://t.me/<bot>?startapp=...
+export const MINIAPP_SHORT_NAME = 'escapist';
