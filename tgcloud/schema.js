@@ -9,7 +9,9 @@ export const users = table('users', {
   totalXp: integer('total_xp').notNull().default(0),
   matchesPlayed: integer('matches_played').notNull().default(0),
   matchesWon: integer('matches_won').notNull().default(0),
-  title: text('title').default('تازه‌وارد'),
+  // Unused: the title is computed from XP by titleFor() in lib/users.js.
+  // Dropped on the next `npx tgcloud migrate`.
+  title: text('title').deprecated('unused; title is computed from total_xp'),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
 

@@ -5,12 +5,15 @@ import { upsertUser } from './users.js';
 import { getMatch, setStatus } from './matches.js';
 import { addPlayer, countActive, deactivate, getActive } from './players.js';
 import { computeStatus } from './capacity.js';
-import { refreshCard, unpinCard } from './cards.js';
+import { refreshCard, unpinCard, pinCard } from './cards.js';
 import { onMatchStart } from './gameEngine.js';
 import { api } from 'sdk';
 
 // Shared by /forcematch and the start button.
+// If the engine fails to start, the match goes back to its previous registration
+// state (open/full) instead of being stuck as "running".
 export async function startMatch(match, notReadyText) {
+  const prevStatus = match.status;
   await setStatus(match.id, 'running');
   await unpinCard(match);
   await refreshCard(match.id);
@@ -18,6 +21,9 @@ export async function startMatch(match, notReadyText) {
     await onMatchStart(match.id);
   } catch (e) {
     console.error('onMatchStart failed', e.message);
+    await setStatus(match.id, prevStatus);
+    await refreshCard(match.id);
+    await pinCard(match);
     await send(match.groupId, notReadyText);
   }
 }
@@ -38,12 +44,18 @@ async function join(c, id) {
   if (status === 'full') await send(match.groupId, '🎉 همه حاضرن! ادمین می‌تونه بازی رو شروع کنه ▶️');
 }
 
+// Allowed while open AND full. Leaving a full match reopens registration.
 async function leave(c, id) {
   const match = await getMatch(id);
-  if (!match || match.status !== 'open') return;
+  if (!match || !['open', 'full'].includes(match.status)) return;
   const user = await upsertUser(c.from);
   if (!(await getActive(id, user.id))) return;
   await deactivate(id, user.id);
+  if (match.status === 'full') {
+    await setStatus(id, 'open');
+    await refreshCard(id);
+    return send(match.groupId, '🚪 یه نفر خارج شد؛ ثبت‌نام دوباره بازه!');
+  }
   await refreshCard(id);
 }
 

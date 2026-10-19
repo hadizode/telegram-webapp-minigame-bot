@@ -34,26 +34,36 @@ export function buildCard(match, pack, players) {
     list,
   ].join('\n');
 
+  const leaveBtn = { text: '❌ خروج', callback_data: `match:leave:${match.id}` };
   let reply_markup = EMPTY_KB;
   if (match.status === 'open') {
     reply_markup = { inline_keyboard: [[
       { text: '🚪 ورود', callback_data: `match:join:${match.id}` },
-      { text: '❌ خروج', callback_data: `match:leave:${match.id}` },
+      leaveBtn,
     ]] };
   } else if (match.status === 'full') {
-    reply_markup = { inline_keyboard: [[{ text: '▶️ شروع بازی', callback_data: `match:start:${match.id}` }]] };
+    // Leaving a full match reopens registration (see matchActions.leave).
+    reply_markup = { inline_keyboard: [[
+      { text: '▶️ شروع بازی', callback_data: `match:start:${match.id}` },
+      leaveBtn,
+    ]] };
   }
   return { text, reply_markup };
 }
+
+export const pinCard = (match) =>
+  match.messageId
+    ? tryApi(() => api.pinChatMessage({
+      chat_id: match.groupId, message_id: match.messageId, disable_notification: true,
+    }), 'pin')
+    : undefined;
 
 export async function postMatchCard(matchId) {
   const match = await getMatch(matchId);
   const { text, reply_markup } = buildCard(match, getPack(match.packId), await listActive(matchId));
   const msg = await send(match.groupId, text, { reply_markup });
   await setMessageId(matchId, msg.message_id);
-  await tryApi(() => api.pinChatMessage({
-    chat_id: match.groupId, message_id: msg.message_id, disable_notification: true,
-  }), 'pin');
+  await pinCard({ ...match, messageId: msg.message_id });
 }
 
 export async function refreshCard(matchId) {

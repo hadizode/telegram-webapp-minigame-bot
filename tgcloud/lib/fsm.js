@@ -1,4 +1,5 @@
 import { db } from 'sdk';
+import { maybeSweep } from './cleanup.js';
 
 const TTL_MS = 5 * 60 * 1000;
 export const fsmKey = (chatId, userId) => `newmatch:${chatId}:${userId}`;
@@ -10,10 +11,12 @@ export async function loadState(id) {
   return JSON.parse(row.data);
 }
 
-// Every save refreshes the 5-minute TTL.
-export const saveState = (id, state) =>
-  db.run('INSERT OR REPLACE INTO fsm_sessions (id, data, expires_at) VALUES (:id, :data, :exp)', {
+// Every save refreshes the 5-minute TTL (and occasionally sweeps expired rows).
+export async function saveState(id, state) {
+  await maybeSweep();
+  return db.run('INSERT OR REPLACE INTO fsm_sessions (id, data, expires_at) VALUES (:id, :data, :exp)', {
     ':id': id, ':data': JSON.stringify(state), ':exp': Date.now() + TTL_MS,
   });
+}
 
 export const clearState = (id) => db.run('DELETE FROM fsm_sessions WHERE id = :id', { ':id': id });

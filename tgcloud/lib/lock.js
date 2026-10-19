@@ -1,8 +1,10 @@
 import { db } from 'sdk';
 import { rid } from './util.js';
+import { maybeSweep } from './cleanup.js';
 
 // DB-backed lock (replaces Redis SET NX PX). Returns a release function or throws 'LOCKED'.
 export async function acquireLock(id, ttlMs = 3000) {
+  await maybeSweep(); // clears expired locks/sessions of every id, not just this one
   const now = Date.now();
   const token = rid();
   await db.run('DELETE FROM locks WHERE id = :id AND expires_at < :now', { ':id': id, ':now': now });

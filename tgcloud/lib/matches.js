@@ -19,7 +19,10 @@ export async function createMatch({ groupId, packId, maxPlayers, createdBy }) {
 }
 
 export function setStatus(id, status) {
-  const set = status === 'running' ? { status, startedAt: new Date() } : { status };
+  let set = { status };
+  if (status === 'running') set = { status, startedAt: new Date() };
+  // Going back to registration (e.g. engine failed to start) clears the start time.
+  else if (status === 'open' || status === 'full') set = { status, startedAt: null };
   return db.update(matches).set(set).where(eq(matches.id, id)).run();
 }
 
