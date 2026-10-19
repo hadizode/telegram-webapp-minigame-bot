@@ -1,4 +1,4 @@
-import { isAdmin } from './config.js';
+import { isChatAdmin } from './admin.js';
 import { acquireLock } from './lock.js';
 import { send } from './tg.js';
 import { upsertUser } from './users.js';
@@ -25,17 +25,17 @@ export async function startMatch(match, notReadyText) {
 // c = { chatId, from }
 async function join(c, id) {
   const match = await getMatch(id);
-  if (!match || match.status !== 'open') return send(c.chatId, 'این مچ دیگه باز نیست');
+  if (!match || match.status !== 'open') return send(c.chatId, '🚪 ثبت‌نام این مچ بسته شده');
   const member = await api.getChatMember({ chat_id: match.groupId, user_id: c.from.id });
-  if (['left', 'kicked'].includes(member.status)) return send(c.chatId, 'اول باید عضو گروه باشی');
+  if (['left', 'kicked'].includes(member.status)) return send(c.chatId, '👥 اول باید عضو گروه باشی');
   const user = await upsertUser(c.from);
   if (await getActive(id, user.id)) return;
-  if ((await countActive(id)) >= match.maxPlayers) return send(c.chatId, 'ظرفیت پره');
+  if ((await countActive(id)) >= match.maxPlayers) return send(c.chatId, '😅 ظرفیت پر شده');
   await addPlayer(id, user.id);
   const status = computeStatus(await countActive(id), match.maxPlayers);
   if (status === 'full') await setStatus(id, 'full');
   await refreshCard(id);
-  if (status === 'full') await send(match.groupId, '✅ همه حاضرن! ادمین شروع کنه.');
+  if (status === 'full') await send(match.groupId, '🎉 همه حاضرن! ادمین می‌تونه بازی رو شروع کنه ▶️');
 }
 
 async function leave(c, id) {
@@ -48,10 +48,10 @@ async function leave(c, id) {
 }
 
 async function start(c, id) {
-  if (!isAdmin(c.from.id)) return send(c.chatId, 'اجازه نداری');
+  if (!(await isChatAdmin(c.chatId, c.from.id))) return send(c.chatId, '⛔ فقط ادمین‌ها می‌تونن این کار رو بکنن');
   const match = await getMatch(id);
   if (!match || match.status !== 'full') return;
-  return startMatch(match, 'موتور بازی هنوز آماده نیست');
+  return startMatch(match, '🛠 موتور بازی هنوز آماده نیست');
 }
 
 const actions = { join, leave, start };
@@ -61,7 +61,7 @@ export async function handleMatchAction(c, action, id) {
   try {
     release = await acquireLock(`match:${id}`, 3000);
   } catch {
-    return send(c.chatId, 'یه لحظه صبر کن و دوباره بزن');
+    return send(c.chatId, '⏳ یه لحظه صبر کن و دوباره امتحان کن');
   }
   try {
     return await actions[action](c, id);

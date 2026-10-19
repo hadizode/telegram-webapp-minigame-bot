@@ -8,13 +8,15 @@ export default async function (message) {
   const cmd = COMMANDS[m[1].toLowerCase()];
   if (!cmd) return;
   try {
-    if (m[2]) {
+    // In groups the command must be addressed to this bot (/cmd@botname).
+    if (message.chat.type !== 'private') {
+      if (!m[2]) return;
       const me = await api.getMe();
-      if (me.username.toLowerCase() !== m[2].toLowerCase()) return; // addressed to another bot
+      if (me.username.toLowerCase() !== m[2].toLowerCase()) return;
     }
     await cmd(message);
   } catch (e) {
     console.error('command failed', m[1], e);
-    await tryApi(() => send(message.chat.id, 'خطایی رخ داد'), 'error reply');
+    await tryApi(() => send(message.chat.id, '⚠️ مشکلی پیش اومد، دوباره امتحان کن'), 'error reply');
   }
 }

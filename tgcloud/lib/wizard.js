@@ -13,7 +13,7 @@ function packStep(sid) {
   const packs = listPacks();
   const rows = packs.map((p) => [{ text: p.name, callback_data: `nm:pack:${p.id}:${sid}` }]);
   rows.push([{ text: '🔄 رفرش', callback_data: `nm:refresh:${sid}` }, cancelBtn(sid)]);
-  return { text: packs.length ? 'یه پک انتخاب کن:' : 'هیچ پکی پیدا نشد.', reply_markup: kb(rows) };
+  return { text: packs.length ? '📦 <b>یه پک انتخاب کن:</b>' : '😕 هیچ پکی پیدا نشد.', reply_markup: kb(rows) };
 }
 
 // Entry: /newmatch message
@@ -30,7 +30,7 @@ async function onPack(c, s, packId) {
   await saveState(c.key, s);
   // NOTE: pack thumbnail skipped (not part of required pack fields).
   const caps = validCapacities(pack).map((n) => ({ text: String(n), callback_data: `nm:cap:${n}:${s.sid}` }));
-  return editText(c.chatId, c.messageId, `📦 <b>${escapeHtml(pack.name)}</b>\nظرفیت رو انتخاب کن:`, kb([caps, [cancelBtn(s.sid)]]));
+  return editText(c.chatId, c.messageId, `📦 <b>${escapeHtml(pack.name)}</b>\n\n👥 <b>ظرفیت مچ رو انتخاب کن:</b>`, kb([caps, [cancelBtn(s.sid)]]));
 }
 
 async function onCap(c, s, n) {
@@ -38,7 +38,14 @@ async function onCap(c, s, n) {
   if (!validCapacities(pack).includes(n)) return;
   Object.assign(s, { step: 'confirm', capacity: n });
   await saveState(c.key, s);
-  const text = `📦 ${escapeHtml(pack.name)}\n🎭 تم: ${escapeHtml(pack.theme_fa || pack.theme)}\n👥 ظرفیت: ${n}\n🚪 تعداد اتاق: ${pack.rooms.length}`;
+  const text = [
+    '📋 <b>خلاصه‌ی مچ</b>',
+    '━━━━━━━━━━━━━━',
+    `📦 پک: ${escapeHtml(pack.name)}`,
+    `🎭 تم: ${escapeHtml(pack.theme_fa || pack.theme)}`,
+    `👥 ظرفیت: ${n} نفر`,
+    `🚪 تعداد اتاق: ${pack.rooms.length}`,
+  ].join('\n');
   return editText(c.chatId, c.messageId, text, kb([[
     { text: '✅ شروع ثبت‌نام', callback_data: `nm:confirm:${s.sid}` }, cancelBtn(s.sid),
   ]]));
@@ -46,14 +53,14 @@ async function onCap(c, s, n) {
 
 async function onConfirm(c, s) {
   if (await findOpenByGroup(c.chatId)) {
-    return editText(c.chatId, c.messageId, 'یه مچ باز داری، اول تمومش کن', EMPTY_KB);
+    return editText(c.chatId, c.messageId, '⚠️ یه مچ باز داری؛ اول اون رو تموم یا لغو کن', EMPTY_KB);
   }
   const match = await createMatch({
     groupId: c.chatId, packId: s.packId, maxPlayers: s.capacity, createdBy: c.from.id,
   });
   await postMatchCard(match.id);
   await clearState(c.key);
-  return editText(c.chatId, c.messageId, '✅ مچ ساخته شد', EMPTY_KB);
+  return editText(c.chatId, c.messageId, '🎉 مچ ساخته شد! ثبت‌نام رو توی پیام پین‌شده ببین', EMPTY_KB);
 }
 
 // c = { chatId, messageId, from }; parts = data.split(':') => nm:<action>:<args...>:<sid>
@@ -63,7 +70,7 @@ export async function handleWizard(c, parts) {
   c.key = fsmKey(c.chatId, c.from.id);
   const s = await loadState(c.key);
   if (!s || s.sid !== sid) {
-    return editText(c.chatId, c.messageId, '⌛ نشست منقضی شد، دوباره /newmatch بزن', EMPTY_KB);
+    return editText(c.chatId, c.messageId, '⌛ زمان این مرحله تموم شد؛ دوباره /newmatch بزن', EMPTY_KB);
   }
   await saveState(c.key, s); // refresh TTL
   if (action === 'cancel') { await clearState(c.key); return editText(c.chatId, c.messageId, '❌ لغو شد', EMPTY_KB); }

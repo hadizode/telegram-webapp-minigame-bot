@@ -22,3 +22,10 @@ export async function upsertUser(from) {
 
 export const getUserByTgId = (tgId) => db.select().from(users).where(eq(users.tgId, tgId)).get();
 export const topUsers = (n = 20) => db.select().from(users).orderBy(desc(users.totalXp)).limit(n).all();
+
+export function nextTitle(xp) {
+  if (xp <= 100) return { title: 'کاوشگر', left: 101 - xp };
+  if (xp <= 500) return { title: 'استاد قفل', left: 501 - xp };
+  if (xp <= 2000) return { title: 'افسانه فرار', left: 2001 - xp };
+  return null;
+}

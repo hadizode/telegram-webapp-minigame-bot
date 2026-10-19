@@ -6,11 +6,11 @@ import { listActive } from './players.js';
 import { getPack } from './packLoader.js';
 
 const statusFa = (s, joined, max) => ({
-  open: `در انتظار (${joined}/${max})`,
-  full: 'همه حاضرن — منتظر شروع',
-  running: 'در حال بازی',
-  finished: 'تموم شد',
-  cancelled: 'لغو شد',
+  open: `🟡 در انتظار بازیکن (${joined}/${max})`,
+  full: '🟢 همه حاضرن — منتظر شروع',
+  running: '🎮 در حال بازی',
+  finished: '🏁 تموم شد',
+  cancelled: '🚫 لغو شد',
 })[s];
 
 const name = (p) => (p.username ? `@${escapeHtml(p.username)}` : escapeHtml(p.firstName));
@@ -19,17 +19,18 @@ export function buildCard(match, pack, players) {
   const joined = players.length;
   const list = joined ? players.map((p, i) => `${i + 1}. ${name(p)}`).join('\n') : 'هنوز کسی جوین نشده';
   const text = [
-    `🏥 <b>مچ جدید — ${escapeHtml(pack.name)}</b>`,
-    '',
+    `🏥 <b>${escapeHtml(pack.name)}</b>`,
+    '━━━━━━━━━━━━━━',
     `🎭 تم: ${escapeHtml(pack.theme_fa || pack.theme)}`,
-    `👥 ظرفیت: ${joined}/${match.maxPlayers}`,
+    `👥 ظرفیت: <b>${joined}/${match.maxPlayers}</b>`,
     `⏳ وضعیت: ${statusFa(match.status, joined, match.maxPlayers)}`,
     '',
-    '<b>قبل از شروع:</b>',
+    '📌 <b>قبل از شروع</b>',
     `• حداقل ${pack.min_players} نفر لازمه`,
     '• یه وویس کال بزنید یا همین‌جا چت کنید',
-    '• اولین کسی که کد درست رو بزنه، رتبه ۱',
+    '• اولین کسی که کد درست رو بزنه، رتبه ۱ می‌شه',
     '',
+    '🧑‍🤝‍🧑 <b>بازیکن‌ها</b>',
     list,
   ].join('\n');
 
