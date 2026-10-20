@@ -21,7 +21,8 @@ export async function begin(message) {
   const state = { sid: rid(), step: 'pack' };
   await saveState(fsmKey(message.chat.id, message.from.id), state);
   const { text, reply_markup } = packStep(state.sid);
-  return send(message.chat.id, text, { reply_markup });
+  return send(message.chat.id, text,{ reply_to_message_id: message.message_id,
+    reply_markup,});
 }
 
 async function onPack(c, s, packId) {

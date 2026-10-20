@@ -22,7 +22,7 @@ export async function testapp(msg) {
     : `https://t.me/${me.username}`;
   const link = `${base}?startapp=test_${msg.chat.id}`;
   console.log('miniapp link', link);
-  return send(msg.chat.id, '🧪 <b>تست مینی‌اپ</b>\nروی دکمه بزن تا مینی‌اپ باز بشه', {
+  return send(msg.chat.id, {
     reply_markup: { inline_keyboard: [[{ text: '🚀 باز کردن مینی‌اپ', url: link }]] },
   });
 }
