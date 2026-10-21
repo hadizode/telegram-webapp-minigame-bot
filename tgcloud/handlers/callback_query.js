@@ -3,6 +3,7 @@ import { handleWizard } from '../lib/wizard.js';
 import { handleMatchAction } from '../lib/matchActions.js';
 import { sendProfileByTgId } from '../lib/commands.js';
 import { tryApi } from '../lib/tg.js';
+import { isChannelMember, JOIN_TEXT } from '../lib/channel.js';
 
 const ROUTES = [
   [/^nm:(pack|cap|confirm|cancel|refresh):/, (c, d) => handleWizard(c, d.split(':'))],
@@ -11,8 +12,12 @@ const ROUTES = [
 ];
 
 export default async function (cq) {
-  // Always answer first to stop the client spinner.
-  await tryApi(() => api.answerCallbackQuery({ callback_query_id: cq.id }), 'answer');
+  if (!(isChannelMember(cq.from.id))){
+    return tryApi(() => api.answerCallbackQuery({
+      callback_query_id: cq.id, text:JOIN_TEXT, show_alert:true,
+    }), 'gate alert');
+  }
+  await tryApi(() => api.answerCallbackQuery({ callback_query_id: cq.id}), 'answer');
   const data = cq.data || '';
   const c = { chatId: cq.message?.chat?.id, messageId: cq.message?.message_id, from: cq.from };
   for (const [re, handler] of ROUTES) {

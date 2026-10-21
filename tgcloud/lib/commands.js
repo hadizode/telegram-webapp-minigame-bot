@@ -92,8 +92,8 @@ export function renderProfile(u) {
   return lines.join('\n');
 }
 
-export async function sendProfileByTgId(chatId, tgId,msg) {
-  const replyOptions = { reply_to_message_id: msg.message_id,};
+export async function sendProfileByTgId(chatId, tgId, msg) {
+  const replyOptions = msg ? { reply_to_message_id: msg.message_id } : {};
   const u = await getUserByTgId(tgId);
   return send(chatId, u ? renderProfile(u) : '🔎 کاربر پیدا نشد',replyOptions);
 }

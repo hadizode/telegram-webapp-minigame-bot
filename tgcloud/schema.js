@@ -57,3 +57,20 @@ export const locks = table('locks', {
   token: text('token').notNull(),
   expiresAt: integer('expires_at').notNull(),
 });
+
+// Append-only log of what happens in a match. Progress and ranking are computed from it.
+//   type 'digit_ok'    — a correct digit was accepted; `slot` = lock cell it filled (0..n-1)
+//   type 'digit_wrong' — a rejected attempt (used for the per-player cooldown); slot is NULL
+// unique(match_id, slot) guarantees a cell is filled once; NULL slots don't collide in SQLite.
+export const matchEvents = table('match_events', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  matchId: integer('match_id').notNull(),
+  userId: integer('user_id').notNull(), // users.id (internal id)
+  type: text('type').notNull(),
+  digit: integer('digit'),
+  slot: integer('slot'),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+}, (t) => ({
+  uqSlot: unique('uq_event_slot').on(t.matchId, t.slot),
+  matchTypeIdx: index('idx_events_match_type').on(t.matchId, t.type),
+}));

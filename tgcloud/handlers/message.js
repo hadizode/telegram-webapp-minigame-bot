@@ -1,6 +1,8 @@
 import { api } from 'sdk';
 import { COMMANDS } from '../lib/commands.js';
 import { send, tryApi } from '../lib/tg.js';
+import { isChannelMember, JOIN_TEXT, joinKeyboard } from '../lib/channel.js';
+import { isAnonymousAdmin } from '../lib/admin.js';
 
 export default async function (message) {
   const m = (message.text || '').match(/^\/(\w+)(?:@(\w+))?(?:\s|$)/);
@@ -19,4 +21,8 @@ export default async function (message) {
     console.error('command failed', m[1], e);
     await tryApi(() => send(message.chat.id, '⚠️ مشکلی پیش اومد، دوباره امتحان کن'), 'error reply');
   }
+  if (!isAnonymousAdmin(message) && !(await isChannelMember(message.from.id))){
+    return send(message.chat.id, JOIN_TEXT, { reply_markup: joinKeyboard() });
+  }
+  await cmd(message);
 }

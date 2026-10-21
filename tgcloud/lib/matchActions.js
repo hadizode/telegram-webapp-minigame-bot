@@ -13,19 +13,17 @@ import { api } from 'sdk';
 // If the engine fails to start, the match goes back to its previous registration
 // state (open/full) instead of being stuck as "running".
 export async function startMatch(match, notReadyText) {
-  const prevStatus = match.status;
   await setStatus(match.id, 'running');
-  await unpinCard(match);
-  await refreshCard(match.id);
   try {
     await onMatchStart(match.id);
   } catch (e) {
     console.error('onMatchStart failed', e.message);
-    await setStatus(match.id, prevStatus);
+    await setStatus(match.id, 'full');
     await refreshCard(match.id);
-    await pinCard(match);
     await send(match.groupId, notReadyText);
   }
+  await unpinCard(match);
+  await refreshCard(match.id);
 }
 
 // c = { chatId, from }

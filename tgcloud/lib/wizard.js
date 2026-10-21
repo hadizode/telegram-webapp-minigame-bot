@@ -1,10 +1,11 @@
 import { rid, escapeHtml } from './util.js';
 import { send, editText, EMPTY_KB } from './tg.js';
 import { fsmKey, loadState, saveState, clearState } from './fsm.js';
-import { listPacks, getPack } from './packLoader.js';
+import { listPacks, getPack, getVariant } from './packLoader.js';
 import { validCapacities } from './capacity.js';
 import { createMatch, findOpenByGroup } from './matches.js';
 import { postMatchCard } from './cards.js';
+import { isChatAdmin } from './admin.js';
 
 const kb = (rows) => ({ inline_keyboard: rows });
 const cancelBtn = (sid) => ({ text: '❌ انصراف', callback_data: `nm:cancel:${sid}` });
@@ -37,6 +38,7 @@ async function onPack(c, s, packId) {
 async function onCap(c, s, n) {
   const pack = getPack(s.packId);
   if (!validCapacities(pack).includes(n)) return;
+  const variant = getVariant(pack, n);
   Object.assign(s, { step: 'confirm', capacity: n });
   await saveState(c.key, s);
   const text = [
@@ -45,7 +47,9 @@ async function onCap(c, s, n) {
     `📦 پک: ${escapeHtml(pack.name)}`,
     `🎭 تم: ${escapeHtml(pack.theme_fa || pack.theme)}`,
     `👥 ظرفیت: ${n} نفر`,
-    `🚪 تعداد اتاق: ${pack.rooms.length}`,
+    `🚪 تعداد اتاق: ${variant.rooms.length}`,
+    `🔢 طول رمز: ${n} رقم`,
+    `⏱ زمان: ${variant.minutes} دقیقه`,
   ].join('\n');
   return editText(c.chatId, c.messageId, text, kb([[
     { text: '✅ شروع ثبت‌نام', callback_data: `nm:confirm:${s.sid}` }, cancelBtn(s.sid),
@@ -66,6 +70,7 @@ async function onConfirm(c, s) {
 
 // c = { chatId, messageId, from }; parts = data.split(':') => nm:<action>:<args...>:<sid>
 export async function handleWizard(c, parts) {
+  if (!(await isChatAdmin(c.chatId, c.from.id))) return;
   const [, action, ...rest] = parts;
   const sid = rest.pop();
   c.key = fsmKey(c.chatId, c.from.id);
