@@ -5,6 +5,7 @@ import { isChannelMember, JOIN_TEXT, joinKeyboard } from '../lib/channel.js';
 import { isAnonymousAdmin } from '../lib/admin.js';
 
 export default async function (message) {
+  const PUBLIC = new Set(['start', 'help']);
   const m = (message.text || '').match(/^\/(\w+)(?:@(\w+))?(?:\s|$)/);
   if (!m) return;
   const cmd = COMMANDS[m[1].toLowerCase()];
@@ -23,5 +24,10 @@ export default async function (message) {
   } catch (e) {
     console.error('command failed', m[1], e);
     await tryApi(() => send(message.chat.id, '⚠️ مشکلی پیش اومد، دوباره امتحان کن'), 'error reply');
+  }
+  if (!PUBLIC.has(m[1].toLowerCase()) &&
+  !isAnonymousAdmin(message) &&
+  !(await isChannelMember(message.from.id))) {
+    return await send(message.chat.id, JOIN_TEXT, { reply_markup: joinKeyboard() });
   }
 }

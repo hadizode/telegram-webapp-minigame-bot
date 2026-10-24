@@ -12,7 +12,7 @@ const ROUTES = [
 ];
 
 export default async function (cq) {
-  if (!(isChannelMember(cq.from.id))){
+  if (!(await isChannelMember(cq.from.id))){
     return tryApi(() => api.answerCallbackQuery({
       callback_query_id: cq.id, text:JOIN_TEXT, show_alert:true,
     }), 'gate alert');
