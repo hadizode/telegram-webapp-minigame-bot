@@ -5,7 +5,7 @@ tg.expand();
 const $ = (id) => document.getElementById(id);
 const call = (name, input) =>
   new Promise((ok, no) => tg.Serverless.call(name, input, (err, res) => (err ? no(err) : ok(res))));
-const url = (p) => '/' + encodeURI(p);
+const url = (p) => '/' + encodeURI(String(p).replace(/^\/+/, ''));
 const mk = (tag, cls, text) => {
   const e = document.createElement(tag);
   if (cls) e.className = cls;

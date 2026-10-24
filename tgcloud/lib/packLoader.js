@@ -1,4 +1,5 @@
 import { PACKS } from './packs/index.js';
+import { roomErrors, isInteractive } from './engine.js';
 
 const REQUIRED = ['theme', 'name', 'min_players', 'max_players', 'lobby', 'rooms', 'variants'];
 const HOTSPOT_TYPES = ['door', 'clue', 'lock'];
@@ -29,7 +30,8 @@ export function validatePack(p) {
     errs.push('lobby needs exactly one "lock" hotspot');
   }
   for (const [id, r] of Object.entries(p.rooms)) {
-    errs.push(...sceneErrors(id, r, roomIds));
+    // Interactive rooms (views + objects) are checked by the engine; the rest are hotspot scenes.
+    errs.push(...(isInteractive(r) ? roomErrors(id, r) : sceneErrors(id, r, roomIds)));
     const okDigits = Array.isArray(r.digits) && r.digits.every((d) => Number.isInteger(d) && d >= 0 && d <= 9);
     if (!okDigits) errs.push(`${id}: digits must be an array of integers 0-9`);
   }
@@ -77,7 +79,7 @@ export function getVariant(pack, n) {
   };
 }
 
-const stripScene = (scene, active) => ({
+export const stripScene = (scene, active) => ({
   name_fa: scene.name_fa,
   image: scene.image,
   bg: scene.bg,
