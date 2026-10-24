@@ -16,13 +16,12 @@ export default async function (message) {
       const me = await api.getMe();
       if (me.username.toLowerCase() !== m[2].toLowerCase()) return;
     }
+    if (!isAnonymousAdmin(message) && !(await isChannelMember(message.from.id))) {
+      return await send(message.chat.id, JOIN_TEXT, { reply_markup: joinKeyboard() });
+    }
     await cmd(message);
   } catch (e) {
     console.error('command failed', m[1], e);
     await tryApi(() => send(message.chat.id, '⚠️ مشکلی پیش اومد، دوباره امتحان کن'), 'error reply');
   }
-  if (!isAnonymousAdmin(message) && !(await isChannelMember(message.from.id))){
-    return send(message.chat.id, JOIN_TEXT, { reply_markup: joinKeyboard() });
-  }
-  await cmd(message);
 }

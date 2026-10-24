@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ویرایشگر اتاق</title>
+<style>
+:root{--bg:#16181a;--panel:#1f2326;--line:#343a3f;--text:#e6e8ea;--dim:#9aa3aa;--acc:#e8b04a;--sel:#4cc2ff;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Vazirmatn,Tahoma,system-ui,sans-serif;display:grid;grid-template-columns:340px 1fr;height:100vh}
+aside{background:var(--panel);border-inline-end:1px solid var(--line);overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+h1{font-size:17px;margin:0}
+h2{font-size:13px;margin:10px 0 0;color:var(--dim);font-weight:600}
+.dim{color:var(--dim);font-size:12px;margin:0}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--dim)}
+input,select,textarea,button,.btn{font:inherit;color:var(--text);background:#2a2f33;border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+input,select,textarea{width:100%}
+textarea{resize:vertical;direction:ltr;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+textarea.bad{border-color:#e5484d}
+button,.btn{cursor:pointer;text-align:center}
+button:hover,.btn:hover{border-color:var(--acc)}
+button.on{border-color:var(--sel);background:#23323b}
+button.danger{color:#ff8a8d}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+.row>*{flex:1}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.grid4 input{padding:6px 4px;direction:ltr}
+main{direction:ltr;overflow:auto;padding:16px}
+.stage{position:relative;display:inline-block;line-height:0;outline:1px solid var(--line)}
+.stage>img{display:block;max-width:100%;max-height:calc(100vh - 40px);width:auto;height:auto;user-select:none}
+.ov{position:absolute;inset:0;cursor:crosshair;touch-action:none}
+.box{position:absolute;border:1.5px dashed var(--acc);background:rgba(232,176,74,.12);cursor:move}
+.box.sel{border:2px solid var(--sel);background:rgba(76,194,255,.15)}
+.box img{width:100%;height:100%;object-fit:fill;opacity:.85;pointer-events:none}
+.lbl{position:absolute;left:0;top:-1.4em;font:11px/1.4 ui-monospace,Consolas,monospace;background:#000b;padding:0 4px;white-space:nowrap;pointer-events:none}
+.hnd{display:none;position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;background:var(--sel);cursor:nwse-resize}
+.box.sel .hnd{display:block}
+.ghost{position:absolute;border:1.5px dashed #fff;pointer-events:none}
+.empty{direction:rtl;color:var(--dim);padding:40px}
+</style>
+</head>
+<body>
+<aside>
+  <h1>ویرایشگر اتاق</h1>
+  <p class="dim">کشیدن روی تصویر: شیء جدید · کشیدن شیء: جابجایی · گوشه‌ی آبی: تغییر اندازه · فلش‌ها: جابجایی دقیق (Shift = بزرگ‌تر) · Delete: حذف</p>
+  <div class="row">
+    <label class="btn">افزودن تصاویر<input type="file" id="imgs" multiple accept="image/*" hidden></label>
+    <label class="btn">باز کردن فایل اتاق<input type="file" id="cfg" accept=".js,.json,.txt" hidden></label>
+  </div>
+  <label>مسیر نسبی پوشه‌ی تصاویر (اختیاری، از محل همین فایل)<input id="src" dir="ltr" placeholder="../public/"></label>
+  <label>پیشوند مسیر تصویر در خروجی<input id="prefix" dir="ltr" placeholder="rooms/power/"></label>
+  <label>شناسه‌ی اتاق<input id="rid" dir="ltr"></label>
+  <h2>نماها</h2>
+  <div class="row" id="views"></div>
+  <div id="viewForm" class="row"></div>
+  <h2>اشیاء این نما</h2>
+  <div class="row" id="objs"></div>
+  <h2>مشخصات شیء</h2>
+  <div id="props" style="display:flex;flex-direction:column;gap:8px"></div>
+  <h2>خروجی</h2>
+  <textarea id="out" rows="10" readonly></textarea>
+  <div class="row"><button id="copy">کپی</button><button id="dl">دانلود</button><button id="reset" class="danger">شروع از نو</button></div>
+  <datalist id="acts"><option>examine</option><option>pickup</option><option>place</option><option>play</option><option>open</option><option>use</option><option>toggle</option></datalist>
+</aside>
+<main id="main"></main>
+<script>
+const $=id=>document.getElementById(id);
+const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+const r=v=>Math.round(v*10)/10, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const base=p=>String(p||'').split('/').pop();
+const S={room:{id:'power',views:{},objects:{}},files:{},view:null,sel:null,prefix:'',src:''};
+const KNOWN=['view','x','y','w','h','action','image'];
+const imgUrl=p=>!p?'':S.files[base(p)]||(S.src?S.src+p:'');
+const draft=()=>{try{localStorage.setItem('roomEditorDraft',JSON.stringify({room:S.room,prefix:S.prefix,src:S.src}))}catch{}};
+try{const d=JSON.parse(localStorage.getItem('roomEditorDraft')||'null');if(d&&d.room){S.room=d.room;S.prefix=d.prefix||'';S.src=d.src||''}}catch{}
+S.room.views=S.room.views||{};S.room.objects=S.room.objects||{};S.view=Object.keys(S.room.views)[0]||null;
+
+function label(t,c){const l=el('label');const s=el('span');s.textContent=t;l.append(s,c);return l}
+function imgSelect(cur,cb){
+  const s=el('select');
+  const opts=[['','— بدون تصویر —'],...Object.keys(S.files).map(n=>[S.prefix+n,n])];
+  if(cur&&!opts.some(o=>o[0]===cur))opts.push([cur,cur]);
+  opts.forEach(([v,t])=>{const o=el('option');o.value=v;o.textContent=t;s.append(o)});
+  s.value=cur||'';s.onchange=()=>cb(s.value);return s;
+}
+const objsOf=v=>Object.entries(S.room.objects).filter(([,o])=>o.view===v);
+const uniq=p=>{let n=1;while(S.room.objects[p+n])n++;return p+n};
+
+function renderTop(){
+  $('rid').value=S.room.id||'';$('prefix').value=S.prefix;$('src').value=S.src;
+  const vs=$('views');vs.innerHTML='';
+  Object.keys(S.room.views).forEach(k=>{const b=el('button',k===S.view?'on':'');b.textContent=k;b.onclick=()=>{S.view=k;S.sel=null;render()};vs.append(b)});
+  const add=el('button');add.textContent='+ نمای جدید';
+  add.onclick=()=>{const n=(prompt('نام نما (مثلا room یا box_open)')||'').trim();if(!n||S.room.views[n])return;S.room.views[n]={image:''};S.view=n;S.sel=null;render()};
+  vs.append(add);
+  const vf=$('viewForm');vf.innerHTML='';
+  if(S.view){
+    const v=S.room.views[S.view];
+    const d=el('button','danger');d.textContent='حذف این نما';
+    d.onclick=()=>{if(!confirm('اشیاء این نما هم حذف می‌شن. مطمئنی؟'))return;
+      objsOf(S.view).forEach(([k])=>delete S.room.objects[k]);delete S.room.views[S.view];
+      S.view=Object.keys(S.room.views)[0]||null;S.sel=null;render()};
+    vf.append(label('تصویر نما',imgSelect(v.image,val=>{v.image=val;render()})),d);
+  }
+}
+
+function place(k){
+  const o=S.room.objects[k],b=document.querySelector(`.box[data-k="${CSS.escape(k)}"]`);
+  if(b)b.style.cssText=`left:${o.x}%;top:${o.y}%;width:${o.w}%;height:${o.h}%`;
+}
+function renderStage(){
+  const m=$('main');m.innerHTML='';
+  const v=S.room.views[S.view];
+  if(!v){m.innerHTML='<p class="empty">اول تصاویر رو اضافه کن، بعد یه نما بساز.</p>';return}
+  const url=imgUrl(v.image);
+  if(!url){m.innerHTML='<p class="empty">برای این نما تصویری انتخاب نشده یا فایلش پیدا نشد. تصویر رو با «افزودن تصاویر» بیار یا مسیر نسبی رو تنظیم کن.</p>';return}
+  const st=el('div','stage'),im=el('img');im.src=url;im.draggable=false;
+  im.onerror=()=>{m.innerHTML='<p class="empty">تصویر بارگذاری نشد: '+v.image+'</p>'};
+  const ov=el('div','ov');st.append(im,ov);m.append(st);
+  objsOf(S.view).forEach(([k,o])=>{
+    const b=el('div','box'+(k===S.sel?' sel':''));b.dataset.k=k;
+    b.style.cssText=`left:${o.x}%;top:${o.y}%;width:${o.w}%;height:${o.h}%`;
+    const u=imgUrl(o.image);if(u){const i=el('img');i.src=u;i.draggable=false;b.append(i)}
+    const l=el('span','lbl');l.textContent=k;b.append(l,el('i','hnd'));ov.append(b);
+  });
+  ov.onpointerdown=down;
+}
+
+let drag=null;
+function pt(e){const q=document.querySelector('.ov').getBoundingClientRect();return{x:(e.clientX-q.left)/q.width*100,y:(e.clientY-q.top)/q.height*100}}
+function down(e){
+  const ov=e.currentTarget,p=pt(e),b=e.target.closest('.box');
+  ov.setPointerCapture(e.pointerId);
+  if(b){const k=b.dataset.k;S.sel=k;drag={mode:e.target.classList.contains('hnd')?'size':'move',k,p,o:{...S.room.objects[k]}};
+    document.querySelectorAll('.box').forEach(x=>x.classList.toggle('sel',x.dataset.k===k));
+  }else{drag={mode:'draw',p};S.sel=null;document.querySelectorAll('.box').forEach(x=>x.classList.remove('sel'))}
+  ov.onpointermove=move;ov.onpointerup=up;
+}
+function move(e){
+  if(!drag)return;const p=pt(e),dx=p.x-drag.p.x,dy=p.y-drag.p.y;
+  if(drag.mode==='draw'){
+    let g=document.querySelector('.ghost');if(!g){g=el('div','ghost');e.currentTarget.append(g)}
+    g.style.cssText=`left:${Math.min(p.x,drag.p.x)}%;top:${Math.min(p.y,drag.p.y)}%;width:${Math.abs(dx)}%;height:${Math.abs(dy)}%`;return;
+  }
+  const o=S.room.objects[drag.k];
+  if(drag.mode==='move'){o.x=r(clamp(drag.o.x+dx,0,100-o.w));o.y=r(clamp(drag.o.y+dy,0,100-o.h))}
+  else{o.w=r(clamp(drag.o.w+dx,1,100-o.x));o.h=r(clamp(drag.o.h+dy,1,100-o.y))}
+  place(drag.k);
+}
+function up(e){
+  const ov=e.currentTarget;ov.onpointermove=ov.onpointerup=null;
+  if(drag&&drag.mode==='draw'){
+    const p=pt(e),x=clamp(Math.min(p.x,drag.p.x),0,100),y=clamp(Math.min(p.y,drag.p.y),0,100);
+    const w=Math.min(Math.abs(p.x-drag.p.x),100-x),h=Math.min(Math.abs(p.y-drag.p.y),100-y);
+    if(w>1&&h>1){const k=uniq('obj');S.room.objects[k]={view:S.view,x:r(x),y:r(y),w:r(w),h:r(h),action:'examine'};S.sel=k}
+  }
+  drag=null;render();
+}
+
+function renderObjs(){
+  const c=$('objs');c.innerHTML='';
+  objsOf(S.view).forEach(([k])=>{const b=el('button',k===S.sel?'on':'');b.textContent=k;b.onclick=()=>{S.sel=k;render()};c.append(b)});
+  if(!c.children.length)c.innerHTML='<p class="dim">با کشیدن روی تصویر یه شیء بساز.</p>';
+}
+function renderProps(){
+  const c=$('props');c.innerHTML='';const k=S.sel,o=S.room.objects[k];
+  if(!o){c.innerHTML='<p class="dim">یه شیء انتخاب کن.</p>';return}
+  const inp=(v,cb,a={})=>{const i=el('input');Object.assign(i,a);i.value=v;i.onchange=()=>cb(i.value);return i};
+  c.append(label('نام شیء',inp(k,v=>{
+    v=v.trim();if(!v||(v!==k&&S.room.objects[v]))return render();
+    const n={};for(const [a,b] of Object.entries(S.room.objects))n[a===k?v:a]=b;
+    S.room.objects=n;S.sel=v;render()})));
+  const vs=el('select');Object.keys(S.room.views).forEach(n=>{const op=el('option');op.value=op.textContent=n;vs.append(op)});
+  vs.value=o.view;vs.onchange=()=>{o.view=vs.value;S.view=o.view;render()};c.append(label('نما',vs));
+  const act=inp(o.action||'',v=>{o.action=v.trim();render()});act.setAttribute('list','acts');act.dir='ltr';c.append(label('عمل',act));
+  c.append(label('تصویر شیء',imgSelect(o.image,v=>{if(v)o.image=v;else delete o.image;render()})));
+  const g=el('div','grid4');
+  ['x','y','w','h'].forEach(f=>g.append(label(f,inp(o[f],v=>{const n=parseFloat(v);if(!isNaN(n))o[f]=r(n);render()},{type:'number',step:'0.1'}))));
+  c.append(g);
+  const ex={};for(const a in o)if(!KNOWN.includes(a))ex[a]=o[a];
+  const ta=el('textarea');ta.rows=3;ta.value=Object.keys(ex).length?JSON.stringify(ex):'';ta.placeholder='{"requires":"fuse1"}';
+  ta.onchange=()=>{let n={};try{n=ta.value.trim()?JSON.parse(ta.value):{}}catch{ta.classList.add('bad');return}
+    ta.classList.remove('bad');for(const a of Object.keys(o))if(!KNOWN.includes(a))delete o[a];Object.assign(o,n);render()};
+  c.append(label('ویژگی‌های اضافه (JSON)',ta));
+  const d=el('button','danger');d.textContent='حذف شیء';d.onclick=()=>{delete S.room.objects[k];S.sel=null;render()};c.append(d);
+}
+
+const key=k=>/^[A-Za-z_$][\w$]*$/.test(k)?k:JSON.stringify(k);
+function ord(o){const n={};KNOWN.forEach(a=>{if(o[a]!==undefined)n[a]=o[a]});for(const a in o)if(!(a in n))n[a]=o[a];return n}
+function out(){
+  const R=S.room,L=['export default {',`  id: ${JSON.stringify(R.id||'room')},`];
+  for(const a in R)if(!['id','views','objects'].includes(a))L.push(`  ${key(a)}: ${JSON.stringify(R[a])},`);
+  L.push('  views: {');for(const [k,v] of Object.entries(R.views))L.push(`    ${key(k)}: ${JSON.stringify(v)},`);
+  L.push('  },','  objects: {');for(const [k,v] of Object.entries(R.objects))L.push(`    ${key(k)}: ${JSON.stringify(ord(v))},`);
+  L.push('  },','};','');return L.join('\n');
+}
+function render(){renderTop();renderStage();renderObjs();renderProps();$('out').value=out();draft()}
+
+$('imgs').onchange=e=>{for(const f of e.target.files)S.files[f.name]=URL.createObjectURL(f);e.target.value='';render()};
+$('cfg').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const t=(await f.text()).replace(/^[\s\S]*?export\s+default/,'').trim().replace(/;$/,'');
+    const o=new Function('return ('+t+')')();
+    o.views=o.views||{};o.objects=o.objects||{};S.room=o;S.view=Object.keys(o.views)[0]||null;S.sel=null;render();
+  }catch(x){alert('فایل خونده نشد: '+x.message)}
+};
+$('rid').onchange=e=>{S.room.id=e.target.value.trim();render()};
+$('prefix').onchange=e=>{S.prefix=e.target.value.trim();render()};
+$('src').onchange=e=>{S.src=e.target.value.trim();render()};
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('out').value)}catch{$('out').select();document.execCommand('copy')}};
+$('dl').onclick=()=>{const a=el('a');a.href=URL.createObjectURL(new Blob([$('out').value],{type:'text/javascript'}));a.download=(S.room.id||'room')+'.js';a.click()};
+$('reset').onclick=()=>{if(!confirm('همه‌چیز پاک می‌شه. مطمئنی؟'))return;S.room={id:'room',views:{},objects:{}};S.view=null;S.sel=null;render()};
+addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
+  const o=S.room.objects[S.sel];if(!o)return;const st=e.shiftKey?1:.1;
+  if(e.key==='Delete'||e.key==='Backspace'){delete S.room.objects[S.sel];S.sel=null}
+  else if(e.key==='ArrowLeft')o.x=r(o.x-st);else if(e.key==='ArrowRight')o.x=r(o.x+st);
+  else if(e.key==='ArrowUp')o.y=r(o.y-st);else if(e.key==='ArrowDown')o.y=r(o.y+st);else return;
+  e.preventDefault();render();
+});
+render();
+</script>
+</body>
+</html>

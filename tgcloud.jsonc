@@ -1,4 +1,5 @@
 {
-  "static": { "source": "dist" },
+  // The Mini App front-end is plain files in public/ (no build step).
+  "static": { "source": "public" },
   "$schema": "./node_modules/@tgcloud/cli/schema/tgcloud.json"
 }

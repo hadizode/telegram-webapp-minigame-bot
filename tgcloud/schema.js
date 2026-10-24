@@ -9,9 +9,7 @@ export const users = table('users', {
   totalXp: integer('total_xp').notNull().default(0),
   matchesPlayed: integer('matches_played').notNull().default(0),
   matchesWon: integer('matches_won').notNull().default(0),
-  // Unused: the title is computed from XP by titleFor() in lib/users.js.
-  // Dropped on the next `npx tgcloud migrate`.
-  title: text('title').deprecated('unused; title is computed from total_xp'),
+  title: text('title').default('تازه‌وارد'),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
 
@@ -58,19 +56,13 @@ export const locks = table('locks', {
   expiresAt: integer('expires_at').notNull(),
 });
 
-// Append-only log of what happens in a match. Progress and ranking are computed from it.
-//   type 'digit_ok'    — a correct digit was accepted; `slot` = lock cell it filled (0..n-1)
-//   type 'digit_wrong' — a rejected attempt (used for the per-player cooldown); slot is NULL
-// unique(match_id, slot) guarantees a cell is filled once; NULL slots don't collide in SQLite.
-export const matchEvents = table('match_events', {
+// Shared game state of a running match (one row per match).
+// state = JSON of the CURRENT room (see lib/engine.js); digits = JSON array of solved-room digits.
+export const gameState = table('game_state', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  matchId: integer('match_id').notNull(),
-  userId: integer('user_id').notNull(), // users.id (internal id)
-  type: text('type').notNull(),
-  digit: integer('digit'),
-  slot: integer('slot'),
-  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
-}, (t) => ({
-  uqSlot: unique('uq_event_slot').on(t.matchId, t.slot),
-  matchTypeIdx: index('idx_events_match_type').on(t.matchId, t.type),
-}));
+  matchId: integer('match_id').notNull().unique(),
+  roomIndex: integer('room_index').notNull().default(0),
+  state: text('state').notNull(),
+  digits: text('digits').notNull().default('[]'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
+});
