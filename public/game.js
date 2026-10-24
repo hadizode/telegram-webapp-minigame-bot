@@ -14,14 +14,10 @@ const mk = (tag, cls, text) => {
 };
 if (new URLSearchParams(location.search).has('debug')) document.body.classList.add('debug');
 
-let room = null, view = null, sel = null, seq = -1, busy = false, toastTimer, sound;
-
-function playSound(path) {
-  if (!path) return;
-  if (sound) sound.pause();
-  sound = new Audio(url(path));
-  sound.play().catch(() => toast('🔇 صدا پخش نشد', false));
-}
+let G = null;            // last game snapshot from the server
+let where = 'lobby';     // 'lobby' | hotspot room id | interactive room id
+const curView = {};      // interactive room id -> current view name
+let sel = null, seq = -1, busy = false, toastTimer, sound;
 
 function toast(text, ok = true) {
   const t = $('toast');
@@ -32,31 +28,71 @@ function toast(text, ok = true) {
   toastTimer = setTimeout(() => (t.hidden = true), 3500);
 }
 
-function apply(r) {
-  if (!r || r.unchanged || r.notReady || r.seq < seq) return;
-  if (!room || room.id !== r.id) { view = r.start; sel = null; }
-  room = r;
-  seq = r.seq;
+function playSound(path) {
+  if (!path) return;
+  if (sound) sound.pause();
+  sound = new Audio(url(path));
+  sound.play().catch(() => toast('🔇 صدا پخش نشد', false));
+}
+
+function apply(g) {
+  if (!g || g.unchanged || g.notReady || g.seq < seq) return;
+  G = g;
+  seq = g.seq;
+  if (!G.scenes[where] && !G.rooms[where]) where = 'lobby';
   render();
 }
 
 function render() {
-  $('title').textContent = room.name;
-  $('back').hidden = view === room.start;
-  $('digits').textContent = room.digits.length ? room.digits.join(' ') : '';
-  renderStage();
+  const room = G.rooms[where];
+  $('title').textContent = room ? room.name : (G.scenes[where].name_fa || '');
+  $('back').hidden = where === 'lobby';
+  $('digits').textContent = G.found.join(' ');
+  if (room) renderRoom(room); else renderScene(G.scenes[where]);
   renderInv();
   renderLog();
   renderBanner();
 }
 
-function renderStage() {
+// ---- hotspot scenes (lobby and simple rooms) -------------------------------------------------
+function renderScene(scene) {
   const st = $('stage');
   st.replaceChildren();
+  st.className = 'simple';
+  st.style.background = scene.bg || '#1b1f2a';
+  if (scene.image) {
+    const img = new Image();
+    img.src = url(scene.image);
+    img.draggable = false;
+    img.onerror = () => img.remove();
+    st.append(img);
+  }
+  for (const h of scene.hotspots) {
+    const b = mk('button', 'hs ' + h.type, h.label_fa || '');
+    b.style.cssText = `left:${h.x}%;top:${h.y}%;width:${h.w}%;height:${h.h}%`;
+    b.onclick = () => onHotspot(h);
+    st.append(b);
+  }
+}
+
+function onHotspot(h) {
+  if (h.type === 'door') { where = h.to; render(); }
+  else if (h.type === 'clue') toast(h.content?.text_fa || '…');
+  else toast('🔐 قفل در خروج — ورود رمز به‌زودی اضافه می‌شه');
+}
+
+// ---- interactive rooms ------------------------------------------------------------------------
+function renderRoom(room) {
+  const view = (curView[room.id] ||= room.start);
+  const st = $('stage');
+  st.replaceChildren();
+  st.className = '';
+  st.style.background = '';
   const img = new Image();
   img.src = url(room.views[view].image);
   img.draggable = false;
   st.append(img);
+
   const here = room.objects.filter((o) => o.view === view);
   const picOf = (o) => (o.images && o.images[o.state]) || o.image;
   // Layers first (below the click areas): a state image written as { image, x, y, w, h }
@@ -79,21 +115,44 @@ function renderStage() {
     if (typeof p === 'string') { const i = new Image(); i.src = url(p); i.draggable = false; b.append(i); }
     const label = o.labels && o.labels[o.state];
     if (label) b.append(mk('span', '', label));
-    b.onclick = () => onObj(o);
+    b.onclick = () => onObj(room, o);
     st.append(b);
   }
+}
+
+async function onObj(room, o) {
+  if (o.action === 'goto') { curView[room.id] = o.to; render(); return; }
+  if (busy) return;
+  busy = true;
+  try {
+    const r = await call('act', { room: room.id, object: o.id, with: sel });
+    toast(r.result.text, r.result.ok);
+    if (r.result.ok) playSound(r.result.audio);
+    if (r.result.ok && o.action === 'place') sel = null;
+    apply(r.game);
+  } catch (e) {
+    toast(e.message || 'خطا', false);
+  } finally {
+    busy = false;
+  }
+}
+
+// ---- shared UI --------------------------------------------------------------------------------
+function itemDef(t) {
+  for (const r of Object.values(G.rooms)) if (r.items[t]) return r.items[t];
+  return {};
 }
 
 function renderInv() {
   const box = $('inv');
   box.replaceChildren();
   const counts = {};
-  for (const t of room.inv) counts[t] = (counts[t] || 0) + 1;
+  for (const t of G.inv) counts[t] = (counts[t] || 0) + 1;
   if (sel && !counts[sel]) sel = null;
   const types = Object.keys(counts);
   if (!types.length) { box.textContent = '🎒 کوله خالیه'; return; }
   for (const t of types) {
-    const def = room.items[t] || {};
+    const def = itemDef(t);
     const b = mk('button', 'item' + (t === sel ? ' sel' : ''));
     if (def.image) { const i = new Image(); i.src = url(def.image); b.append(i); }
     b.append((def.name || t) + (counts[t] > 1 ? ` ×${counts[t]}` : ''));
@@ -103,7 +162,7 @@ function renderInv() {
 }
 
 function renderLog() {
-  $('log').replaceChildren(...room.log.slice(-3).map((l) => {
+  $('log').replaceChildren(...G.log.slice(-3).map((l) => {
     const row = mk('div', '', `${l.by}: ${l.text} `);
     if (l.audio) { const b = mk('button', 'snd', '🔊'); b.onclick = () => playSound(l.audio); row.append(b); }
     return row;
@@ -111,44 +170,29 @@ function renderLog() {
 }
 
 function renderBanner() {
+  const room = G.rooms[where];
   const b = $('banner');
-  b.hidden = !room.done;
-  if (!room.done) return;
-  b.replaceChildren(mk('p', '', '🎉 ' + (room.win?.text || 'اتاق حل شد!')));
-  if (room.win?.digit !== undefined) b.append(mk('strong', '', String(room.win.digit)));
-  const btn = mk('button', '', room.last ? 'همه‌ی اتاق‌ها تموم شد' : 'ورود به اتاق بعدی');
-  if (room.last) btn.disabled = true; else btn.onclick = nextRoom;
+  b.hidden = !(room && room.done);
+  if (b.hidden) return;
+  b.replaceChildren(mk('p', '', '🎉 ' + (room.win.text || 'اتاق حل شد!')));
+  if (room.win.digits.length) b.append(mk('strong', '', room.win.digits.join(' ')));
+  const btn = mk('button', '', 'بازگشت به لابی');
+  btn.onclick = () => { where = 'lobby'; render(); };
   b.append(btn);
 }
 
-async function onObj(o) {
-  if (o.action === 'goto') { view = o.to; render(); return; }
-  if (busy) return;
-  busy = true;
-  try {
-    const r = await call('act', { object: o.id, with: sel });
-    toast(r.result.text, r.result.ok);
-    if (r.result.ok) playSound(r.result.audio);
-    if (r.result.ok && o.action === 'place') sel = null;
-    apply(r.room);
-  } catch (e) {
-    toast(e.message || 'خطا', false);
-  } finally {
-    busy = false;
-  }
-}
-
-async function nextRoom() {
-  try { apply((await call('nextRoom', {})).room); } catch (e) { toast(e.message || 'خطا', false); }
-}
-
-$('back').onclick = () => { view = room.start; render(); };
+$('back').onclick = () => {
+  const room = G && G.rooms[where];
+  if (room && curView[room.id] && curView[room.id] !== room.start) curView[room.id] = room.start;
+  else where = 'lobby';
+  render();
+};
 
 async function poll() {
   try {
-    apply(await call('getRoom', { seq }));
+    apply(await call('getGame', { seq }));
   } catch (e) {
-    if (!room) $('stage').textContent = e.message || 'خطا در اتصال';
+    if (!G) $('stage').textContent = e.message || 'خطا در اتصال';
   }
   setTimeout(poll, 2500);
 }

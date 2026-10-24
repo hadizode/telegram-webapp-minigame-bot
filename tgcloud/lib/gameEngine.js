@@ -8,14 +8,14 @@ import { escapeHtml } from './util.js';
 // Called by startMatch (/forcematch and the start button) after status = running.
 export async function onMatchStart(matchId) {
   const match = await getMatch(matchId);
-  const first = getPack(match.packId).rooms[0];
+  const pack = getPack(match.packId);
   await startGame(match);
   const me = await api.getMe();
   await send(match.groupId, [
     '🔐 <b>بازی شروع شد!</b>',
     '━━━━━━━━━━━━━━',
-    escapeHtml(first.intro || 'وارد اتاق اول بشید و با هم معما رو حل کنید.'),
+    escapeHtml(pack.intro_fa || 'وارد لابی بشید، اتاق‌ها رو بگردید و رقم‌های قفل خروج رو پیدا کنید.'),
   ].join('\n'), {
-    reply_markup: { inline_keyboard: [[{ text: '🚪 ورود به اتاق', url: `https://t.me/${me.username}?startapp=m${matchId}` }]] },
+    reply_markup: { inline_keyboard: [[{ text: '🚪 ورود به لابی', url: `https://t.me/${me.username}?startapp=m${matchId}` }]] },
   });
 }

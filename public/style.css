@@ -26,3 +26,9 @@ footer{background:var(--panel);border-top:1px solid var(--line);padding:8px 12px
 #stage>img.layer{position:absolute;max-width:none;max-height:none;pointer-events:none;user-select:none}
 #log .snd{padding:0 8px;font-size:12px}
 #log{max-height:none}
+/* hotspot scenes (lobby + simple rooms) */
+#stage.simple{position:relative;aspect-ratio:16/9;width:min(100vw,calc((100dvh - 200px)*16/9));overflow:hidden}
+#stage.simple>img{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover}
+.hs{position:absolute;display:flex;align-items:center;justify-content:center;padding:2px;font-size:12px;line-height:1.3;text-align:center;border:1.5px solid rgba(232,176,74,.55);background:rgba(10,12,13,.45);border-radius:6px}
+.hs.lock{border-color:#e5484d}
+.hs.clue{border-style:dashed}

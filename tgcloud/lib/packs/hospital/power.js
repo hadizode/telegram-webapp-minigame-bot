@@ -1,10 +1,10 @@
-// Merged: your coordinates (from the editor) + the game rules.
-// Objects marked NEW had no coordinates yet: open this file in the editor and place them.
-// Images live inside public/ (the deployed folder), paths have NO leading slash.
+// اتاق برق — interactive room (see lib/engine.js for every field).
+// Coordinates come from the editor; objects marked NEW still have placeholder coordinates.
+// Images live inside public/ (the deployed folder); paths have NO leading slash.
 export default {
-  id: 'power',
-  name: 'اتاق برق',
-  intro: 'برق ساختمون قطعه. باید ژنراتور رو راه بندازید تا چراغ لابی روشن بشه.',
+  name_fa: 'اتاق برق',
+  bg: '#1b1f2a',
+  digits: [2], // shown on the generator display once it is on
   start: 'main',
   items: {
     fuse: { name: 'فیوز' },
@@ -12,11 +12,10 @@ export default {
   },
   win: {
     requires: ['mainSwitch'],
-    digit: 2,
     text: 'ژنراتور روشن شد و چراغ لابی هم روشن شد!',
   },
   views: {
-    main: { image: 'pack1/powerroom/main.png' },
+    main: { image: 'pack1/powerroom/main.jpg' },
     box: { image: 'pack1/powerroom/box.png' },
     cassete: { image: 'pack1/powerroom/cassete.png' },
   },
