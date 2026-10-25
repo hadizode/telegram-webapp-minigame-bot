@@ -38,6 +38,7 @@ export const matchPlayers = table('match_players', {
   isActive: boolean('is_active').notNull().default(true),
   rank: integer('rank'),
   score: integer('score'),
+  lastSeen: integer('last_seen'), // unix ms, آخرین poll از Mini App
   joinedAt: integer('joined_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 }, (t) => ({
   uq: unique('uq_match_user').on(t.matchId, t.userId),

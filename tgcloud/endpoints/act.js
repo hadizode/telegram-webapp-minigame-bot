@@ -9,5 +9,5 @@ export default async function (input, ctx) {
   const withItem = typeof input.with === 'string' ? input.with : null;
   const out = await playerAct(match, user, room, object, withItem);
   if (out.busy) throw new EndpointError('⏳ یه لحظه صبر کن و دوباره بزن', { code: 'BUSY' });
-  return { result: out.result, game: await snapshot(match) };
+  return { result: out.result, game: await snapshot(match, user) };
 }

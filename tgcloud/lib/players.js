@@ -29,7 +29,10 @@ export async function addPlayer(matchId, userId) {
   }
   return db.insert(matchPlayers).values({ matchId, userId }).run();
 }
-
+export const touch = (matchId, userId) =>
+  db.update(matchPlayers).set({ lastSeen: Date.now() })
+    .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, userId))).run();
+    
 export const deactivate = (matchId, userId) =>
   db.update(matchPlayers).set({ isActive: false })
     .where(and(eq(matchPlayers.matchId, matchId), eq(matchPlayers.userId, userId))).run();

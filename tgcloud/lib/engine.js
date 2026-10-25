@@ -55,7 +55,7 @@ export function initialGame(pack, roomIds) {
     objs[id] = {};
     for (const [oid, o] of Object.entries(room.objects)) objs[id][oid] = o.hidden ? 'hidden' : 'idle';
   }
-  return { seq: 0, log: [], inv: [], objs, done: {} };
+  return { seq: 0, log: [], inv: {}, objs, done: {} };
 }
 
 // What the Mini App may see of an interactive room (never requires/sets/accepts/texts).
@@ -82,11 +82,12 @@ export function publicRoom(id, room, gs) {
 }
 
 // Mutates gs. Returns { ok, text, audio?, changed?, solved? }.
-export function act(room, roomId, gs, id, withItem, by) {
+export function act(room, roomId, gs, id, withItem, by,uid) {
   const objs = gs.objs[roomId];
   const o = room.objects[id];
   const s = objs[id];
   if (!o || !s || s === 'hidden' || s === 'taken') return { ok: false, text: '🔎 چیزی اینجا پیدا نشد' };
+  const inv = (gs.inv[uid] ||= []);
   if (o.action === 'goto') return { ok: true };
   if (o.decoy) return { ok: false, text: o.failText || '❌ هیچ اتفاقی نیفتاد' };
 
@@ -99,12 +100,12 @@ export function act(room, roomId, gs, id, withItem, by) {
   }
   if (o.action === 'place') {
     if (!withItem) return { ok: false, text: '🎒 اول یه آیتم از کوله‌ت انتخاب کن' };
-    const i = gs.inv.indexOf(withItem);
+    const i = inv.indexOf(withItem);
     if (i < 0) return { ok: false, text: '🎒 این آیتم رو نداری' };
     if (withItem !== o.accepts) return { ok: false, text: o.failText || '🤔 این اینجا جواب نمی‌ده' };
-    gs.inv.splice(i, 1);
+    inv.splice(i, 1);
   }
-  if (o.action === 'pickup') gs.inv.push(o.item || id);
+  if (o.action === 'pickup') inv.push(o.item || id);
 
   let next = o.setState;
   if (!next) next = o.action === 'pickup' ? 'taken' : o.action === 'examine' ? (o.sets ? 'done' : null) : 'done';

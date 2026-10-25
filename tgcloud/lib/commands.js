@@ -47,7 +47,7 @@ async function start(msg) {
   return send(
     msg.chat.id,
     [
-      '🔐 <b>آماده ماجرا جویی هستی؟؟</b>',
+      '🔐 <b>آماده ماجراجویی هستی؟؟</b>',
       LINE,
       '👤 /profile — پروفایل من',
       '🏆 /ranklist — جدول برترین‌ها',

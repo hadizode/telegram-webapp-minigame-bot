@@ -21,7 +21,7 @@ export function startGame(match) {
 
 // What the Mini App sees: lobby + hotspot rooms (publicView-style), interactive rooms, shared inventory/log.
 // Rules, answers and digits of unsolved rooms never leave the server.
-export async function snapshot(match) {
+export async function snapshot(match, user) {
   const g = await getGame(match.id);
   if (!g) return null;
   const pack = getPack(match.packId);
@@ -39,7 +39,7 @@ export async function snapshot(match) {
       scenes[id] = stripScene(r, active);
     }
   }
-  return { seq: gs.seq, name: pack.name, lockLength: match.maxPlayers, scenes, rooms, inv: gs.inv, log: gs.log, found };
+  return { seq: gs.seq, name: pack.name, lockLength: match.maxPlayers, scenes, rooms, inv: (!Array.isArray(gs.inv) && gs.inv[user.id]) || [], log: gs.log, found };
 }
 
 export const playerAct = (match, user, roomId, objectId, withItem) => locked(match.id, async () => {
@@ -51,9 +51,10 @@ export const playerAct = (match, user, roomId, objectId, withItem) => locked(mat
     return { result: { ok: false, text: '🔎 این اتاق وجود نداره' } };
   }
   const gs = JSON.parse(g.state);
+  if (Array.isArray(gs.inv)) gs.inv = {};
   if (gs.done[roomId]) return { result: { ok: true, text: '🏁 این اتاق حل شده' } };
 
-  const result = act(room, roomId, gs, objectId, withItem, user.firstName || user.username || 'یکی از بازیکن‌ها');
+  const result = act(room, roomId, gs, objectId, withItem, user.firstName || user.username || 'یکی از بازیکن‌ها', user.id);
   if (!result.changed) return { result: { ok: result.ok, text: result.text, audio: result.audio } };
 
   await saveGame(match.id, { state: JSON.stringify(gs) });

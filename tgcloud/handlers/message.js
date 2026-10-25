@@ -3,8 +3,10 @@ import { COMMANDS } from '../lib/commands.js';
 import { send, tryApi } from '../lib/tg.js';
 import { isChannelMember, JOIN_TEXT, joinKeyboard } from '../lib/channel.js';
 import { isAnonymousAdmin } from '../lib/admin.js';
+import { closeAbandoned } from '../lib/presence.js';
 
 export default async function (message) {
+  await closeAbandoned();
   const PUBLIC = new Set(['start', 'help']);
   const m = (message.text || '').match(/^\/(\w+)(?:@(\w+))?(?:\s|$)/);
   if (!m) return;
