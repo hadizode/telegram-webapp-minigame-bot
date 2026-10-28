@@ -3,8 +3,9 @@
 ربات بازی گروهی «اتاق فرار» برای تلگرام، ساخته‌شده روی پلتفرم **Telegram Serverless (tgcloud)**.
 ادمین گروه یک مچ می‌سازد، بازیکن‌ها ثبت‌نام می‌کنند و بعد تیمی وارد اتاق‌ها می‌شوند تا معماها را حل کنند.
 
-> **وضعیت پروژه:** پایه‌ی ربات (دستورات، ویزارد ساخت مچ، ثبت‌نام، پروفایل و رتبه‌بندی) آماده است.
-> موتور بازی (`gameEngine`) و Mini App هنوز پیاده‌سازی نشده‌اند.
+> **وضعیت پروژه:** پایه‌ی ربات، موتور بازی (`engine/rules/game`)، Mini App و چرخه‌ی پایان بازی
+> (تایمر، قفل خروج با keypad، ثبت نتیجه/XP) پیاده‌سازی شده‌اند.
+> فعلاً فقط اتاق «برق» پک بیمارستان کامل است؛ اتاق‌های دیگر سناریو در دست ساخت‌اند.
 
 ---
 
@@ -13,6 +14,11 @@
 - ساخت مچ با ویزارد مرحله‌ای (انتخاب پک ← ظرفیت ← تأیید)
 - کارت مچ پین‌شده در گروه با دکمه‌های ورود / خروج / شروع
 - قفل (lock) روی عملیات هر مچ برای جلوگیری از race condition
+- موتور بازی data-driven: قواعد اتاق‌ها داخل فایل پک، ارقام و رمز هیچ‌وقت به کلاینت نمی‌روند
+- Mini App (بدون build): نقشه، اتاق‌ها، inventory، شمارش معکوس و keypad قفل خروج
+- چرخه‌ی پایان بازی: تایمر lazy، برد با زدن رمز کامل، باخت با پایان وقت یا `/finish`
+- ثبت نتیجه: رتبه/اسکور هر بازیکن، XP، برد/باخت و اعلام نتیجه در گروه
+- گیت عضویت کانال قبل از اجرای دستورات
 - پروفایل بازیکن: XP، لقب، تعداد بازی و برد
 - جدول ۲۰ نفر برتر
 - سیستم پک (Pack) برای افزودن سناریوهای جدید بدون تغییر منطق ربات
@@ -29,6 +35,7 @@
 | `/newmatch` | ادمین | گروه | ویزارد ساخت مچ |
 | `/cancelmatch` | ادمین | گروه | لغو مچ باز |
 | `/forcematch` | ادمین | گروه | شروع اجباری (حداقل تعداد بازیکن لازم است) |
+| `/finish` | ادمین | گروه | پایان فوری مچ در حال اجرا (ثبت نتیجه + اعلام در گروه) |
 
 > ⚠️ در **گروه‌ها** دستور باید با نام ربات بیاید: `/newmatch@your_bot`. در چت خصوصی نیازی نیست.
 > «ادمین» یعنی creator/administrator گروه (از طریق `getChatMember` چک می‌شود؛ ادمین‌های anonymous هم پشتیبانی می‌شوند). فایل `ADMIN_IDS` یا config جداگانه‌ای وجود ندارد.
@@ -37,11 +44,17 @@
 
 ```
 tgcloud/
-├── schema.js              # جدول‌ها: users, matches, match_players, fsm_sessions, locks
+├── schema.js              # جدول‌ها: users, matches, match_players, fsm_sessions, locks, match_events, game_state
 ├── handlers/
-│   ├── message.js         # پارس و اجرای دستورات
+│   ├── message.js         # پارس و اجرای دستورات (گیت عضویت کانال)
 │   └── callback_query.js  # مسیریابی دکمه‌های اینلاین (nm:*, match:*, profile:*)
+├── endpoints/             # API مینی‌اپ (احراز هویت با initData)
+│   ├── getGame.js         # poll با seq + settle تایمر + presence
+│   ├── act.js             # تعامل با اشیای اتاق (زیر lock)
+│   └── submitCode.js      # keypad قفل خروج → پایان بازی
 └── lib/
+    ├── core.js            # util + game_state + DB lock + cleanup (ادغام‌شده)
+    ├── gate.js            # کانال گیت + تشخیص ادمین + config (ادغام‌شده)
     ├── commands.js        # پیاده‌سازی دستورات + guard (group/admin)
     ├── wizard.js          # ویزارد /newmatch
     ├── matchActions.js    # join / leave / start (با lock)
@@ -50,19 +63,28 @@ tgcloud/
     ├── players.js         # دسترسی به match_players
     ├── users.js           # کاربران، XP و لقب‌ها
     ├── capacity.js        # ظرفیت‌های مجاز و وضعیت پر/باز
+    ├── presence.js        # lastSeen بازیکن‌ها + بستن مچ رهاشده
     ├── fsm.js             # state ویزارد در DB (TTL پنج دقیقه)
-    ├── lock.js            # قفل مبتنی بر DB
-    ├── admin.js           # تشخیص ادمین
     ├── tg.js              # wrapperهای Bot API (send, editText, tryApi)
-    ├── util.js            # escapeHtml, formatDate, rid, ...
     ├── packLoader.js      # اعتبارسنجی و لود پک‌ها
-    ├── gameEngine.js      # ⚠️ placeholder — فاز بعدی
+    ├── engine.js          # اجرای قواعد (triggers/effects) روی state
+    ├── rules.js           # مفسر data-only قواعد اتاق‌ها
+    ├── game.js            # createGame/playerAct (state در game_state)
+    ├── gameEngine.js      # اتصال موتور به چرخه‌ی مچ (onMatchStart)
+    ├── gameApi.js         # requirePlayer / requireAnyPlayer برای endpointها
+    ├── snapshot.js        # نمای state برای کلاینت (بدون ارقام/رمز)
+    ├── finish.js          # ⭐ چرخه‌ی پایان: settle/submitCode/conclude/finishMatch
+    ├── testapp.js         # /testapp — لینک مینی‌اپ برای تست
     └── packs/
-        ├── index.js       # ثبت پک‌ها
-        └── demo.js        # پک نمونه
+        ├── index.js       # ثبت پک‌ها (filesystem در runtime نیست)
+        ├── demo.js        # پک نمونه
+        └── hospital/      # سناریوی بیمارستان (power کامل، بقیه در دست ساخت)
+public/                    # Mini App استاتیک (index.html + game.js + style.css)
+room-editor.html           # ادیتور بصری پک‌ها با playtest
+puzzles/                   # طرح معماها
 docs/tgcloud-sdk.md        # مرجع SDK پلتفرم
 AGENTS.md                  # راهنمای دستیارهای هوش مصنوعی/توسعه‌دهنده‌ها
-tgcloud.jsonc              # تنظیمات پروژه (بخش static برای Mini App فعلاً غیرفعال)
+tgcloud.jsonc              # تنظیمات پروژه (static برای Mini App فعال)
 ```
 
 ## 🚀 راه‌اندازی
@@ -123,7 +145,7 @@ npx tgcloud run handlers/message '{ "chat": { "id": 1, "type": "private" }, "fro
 ## 🔄 چرخه‌ی عمر مچ
 
 ```
-open ──(پر شدن ظرفیت)──▶ full ──(شروع)──▶ running ──▶ finished
+open ──(پر شدن ظرفیت)──▶ full ──(شروع)──▶ running ──(رمز درست / پایان وقت / /finish)──▶ finished
   │                         │
   └────────(/cancelmatch)───┴──▶ cancelled
 ```
@@ -131,6 +153,15 @@ open ──(پر شدن ظرفیت)──▶ full ──(شروع)──▶ runn
 - هر گروه در هر لحظه فقط **یک** مچ `open` یا `full` می‌تواند داشته باشد.
 - ورود/خروج فقط تا زمانی که مچ `open` است ممکن است.
 - شروع مچ هم از دکمه‌ی «▶️ شروع بازی» (فقط ادمین، وقتی `full`) و هم از `/forcematch` ممکن است.
+- مچ رهاشده (بازیکنی دو دقیقه poll نکند) خودکار `cancelled` می‌شود (`presence.closeAbandoned`).
+
+## 🔚 چرخه‌ی پایان بازی (`lib/finish.js`)
+
+- **تایمر:** cron در پلتفرم نیست؛ `getGame`/`act` قبل از پاسخ، `settle()` را صدا می‌زنند — اگر `variants.minutes` گذشته باشد، مچ همان‌جا `finished` (باخت) می‌شود.
+- **قفل خروج:** در Mini App یک keypad باز می‌شود؛ رمز = تمام رقم‌های variant در هر ترتیبی. هر تلاش در `match_events` لاگ می‌شود؛ ≥۳ تلاش غلط در یک دقیقه → cooldown برای همه.
+- **بردی/نتیجه:** اولین کد درست زیر lock مچ، `conclude()` را دقیقاً یک‌بار اجرا می‌کند: رتبه‌بندی بر اساس زمان اولین کد درست، اسکور `1000 + 150×(n−rank) + 5×correct − 2×wrong`، نوشتن `rank/score` در `match_players` و XP/برد در `users`.
+- **اعلام:** پیام نتیجه در گروه + بروزرسانی کارت + end-screen داخل `game_state.finished` که `snapshotWithEnd` به همه‌ی بازیکن‌های polling می‌رساند.
+- **`/finish` (ادمین، گروه):** پایان فوری مچ running با همان مسیر conclude (نتیجه = فرار ناموفق). مناسب تست و موقعی که تیم گیر کرده.
 
 ## 🏅 لقب‌ها
 
@@ -152,11 +183,14 @@ open ──(پر شدن ظرفیت)──▶ full ──(شروع)──▶ runn
 
 ## 🗺 نقشه‌ی راه
 
-- [ ] پیاده‌سازی `gameEngine.onMatchStart` (Mini App session، تایمر، موتور اتاق‌ها)
-- [ ] Mini App و endpointها (`tgcloud/endpoints/`) + فعال‌سازی `static` در `tgcloud.jsonc`
-- [ ] ثبت نتیجه‌ی مچ: `rank`، `score`، XP، `matchesPlayed` و `matchesWon`
+- [x] موتور بازی (`engine` + `rules` + `game`) و endpointها (`getGame`, `act`, `submitCode`)
+- [x] Mini App استاتیک + فعال‌سازی `static` در `tgcloud.jsonc`
+- [x] چرخه‌ی پایان بازی: تایمر lazy، keypad قفل خروج، `/finish`
+- [x] ثبت نتیجه‌ی مچ: `rank`، `score`، XP، `matchesPlayed` و `matchesWon`
+- [ ] تکمیل پک بیمارستان: فایل `hospital.js` (لابی تعاملی + variants معتبر) و اتاق‌های دیگر (سردخانه، داروخانه، آرشیو…)
+- [ ] تصاویر/صداها زیر `public/pack1/…` (فعلاً بخشی از assetها ساخته نشده)
 - [ ] تصویر/thumbnail برای پک‌ها
-- [ ] پاک‌سازی دوره‌ای ردیف‌های منقضی `fsm_sessions` و `locks`
+- [ ] بالانس زمان/رقم‌ها بعد از تست end-to-end با گروه واقعی
 
 ## 📚 مراجع
 

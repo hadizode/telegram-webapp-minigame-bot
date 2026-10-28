@@ -30,13 +30,17 @@ export async function snapshot(match) {
 }
 
 // objectId '@enter:<view>' = "the player entered that view" (runs `enter` rules); anything else is a click.
+// roomId 'lobby' is valid when the pack's lobby is an interactive room (see lib/snapshot.js).
 export const playerAct = (match, user, roomId, objectId, withItem) => locked(match.id, async () => {
   const g = await getGame(match.id);
   if (!g) return { result: { ok: false, text: '⚠️ بازی هنوز آماده نیست' } };
   const pack = getPack(match.packId);
-  const room = pack.rooms[roomId];
+  const room = roomId === 'lobby' ? pack.lobby : pack.rooms[roomId];
   const active = activeRooms(pack, match);
-  if (!active.includes(roomId) || !isInteractive(room)) {
+  if (roomId !== 'lobby' && !active.includes(roomId)) {
+    return { result: { ok: false, text: '🔎 این اتاق وجود نداره' } };
+  }
+  if (!isInteractive(room)) {
     return { result: { ok: false, text: '🔎 این اتاق وجود نداره' } };
   }
   const gs = JSON.parse(g.state);

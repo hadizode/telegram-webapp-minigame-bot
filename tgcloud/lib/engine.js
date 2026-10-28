@@ -66,12 +66,13 @@ export function roomErrors(id, room, rooms = { [id]: room }) {
 // plus rule state (flags, image/background overrides, rooms whose digits were revealed early).
 export function initialGame(pack, roomIds) {
   const objs = {};
-  for (const id of roomIds) {
-    const room = pack.rooms[id];
-    if (!isInteractive(room)) continue;
+  const add = (id, room) => {
+    if (!isInteractive(room)) return;
     objs[id] = {};
     for (const [oid, o] of Object.entries(room.objects)) objs[id][oid] = o.hidden ? 'hidden' : 'idle';
-  }
+  };
+  add('lobby', pack.lobby); // an interactive lobby is playable like any room
+  for (const id of roomIds) add(id, pack.rooms[id]);
   return { seq: 0, log: [], inv: [], objs, done: {}, flags: {}, imgs: {}, bgs: {}, shown: [] };
 }
 
