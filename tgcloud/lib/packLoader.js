@@ -19,15 +19,23 @@ function sceneErrors(label, scene, roomIds) {
   return errs;
 }
 
+// A "scene" is the lobby or a plain hotspot-only room. Interactive rooms (objects/views)
+// are validated by the engine instead — and may serve as the lobby too.
+const isScene = (s) => !!s && !isInteractive(s);
+
 // Returns a list of problems; empty list = valid pack.
 export function validatePack(p) {
   const errs = REQUIRED.filter((k) => p?.[k] === undefined).map((k) => `missing ${k}`);
   if (errs.length) return errs;
 
   const roomIds = Object.keys(p.rooms);
-  errs.push(...sceneErrors('lobby', p.lobby, roomIds));
-  if ((p.lobby.hotspots ?? []).filter((h) => h.type === 'lock').length !== 1) {
-    errs.push('lobby needs exactly one "lock" hotspot');
+  if (isScene(p.lobby)) {
+    errs.push(...sceneErrors('lobby', p.lobby, roomIds));
+    if ((p.lobby.hotspots ?? []).filter((h) => h.type === 'lock').length !== 1) {
+      errs.push('lobby needs exactly one "lock" hotspot');
+    }
+  } else if (!isInteractive(p.lobby)) {
+    errs.push('lobby must be a hotspot scene or an interactive room');
   }
   for (const [id, r] of Object.entries(p.rooms)) {
     // Interactive rooms (views + objects) are checked by the engine (with all rooms, for cross-room refs);
@@ -80,7 +88,10 @@ export function getVariant(pack, n) {
   };
 }
 
-export const stripScene = (scene, active) => ({
+// Shared scene/room view for the client: keeps only what the Mini App may see.
+// Interactive rooms pass through untouched (only `objects`, no `hotspots` — so no door
+// filtering here; the engine strips rules/digits via publicRoom() in snapshots).
+export const stripScene = (scene, active) => isInteractive(scene) ? scene : ({
   name_fa: scene.name_fa,
   image: scene.image,
   bg: scene.bg,
@@ -89,6 +100,7 @@ export const stripScene = (scene, active) => ({
 });
 
 // What the Mini App may see: scenes + hotspots + clue content. Never the digits.
+// (stripScene on interactive rooms is a no-op passthrough; publicRoom() handles those in snapshots.)
 export function publicView(pack, n) {
   const v = getVariant(pack, n);
   const scenes = { lobby: stripScene(pack.lobby, v.rooms) };

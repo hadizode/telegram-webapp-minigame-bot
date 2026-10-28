@@ -174,6 +174,24 @@ export async function settle(match) {
   } finally { await release(); }
 }
 
+// Admin command /finish — end a running match right now, without waiting for the
+// countdown or the exit code. Same lock + conclude path as the timer, so scoring,
+// the announcement and the Mini App end screen behave identically.
+// Returns { ok:true, end } on success, { ok:false, text } otherwise.
+export async function finishMatch(match) {
+  let release;
+  try { release = await acquireLock(`match:${match.id}`, 5000); }
+  catch { return { ok: false, text: '⏳ یه لحظه صبر کن و دوباره بزن' }; }
+  try {
+    const fresh = await getMatch(match.id);
+    if (fresh.status !== 'running') {
+      return { ok: false, text: '🔎 الان مچ در حال اجرایی توی این گروه نیست' };
+    }
+    const end = await conclude(fresh, false, 'بازی توسط ادمین تمام شد.');
+    return { ok: true, end };
+  } finally { await release(); }
+}
+
 // The Mini App's exit-lock keypad. A correct submission must contain ALL the team's
 // digits in any order (the lock cells show no order hint). Wrong attempts are logged
 // and rate-limited per player; a correct one concludes the match exactly once.

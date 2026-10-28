@@ -3,7 +3,8 @@ import { isAdminMessage, isGroup } from './gate.js';
 import { escapeHtml, formatDate } from './core.js';
 import { send, editText, EMPTY_KB } from './tg.js';
 import { upsertUser, getUserByTgId, topUsers, titleFor, nextTitle } from './users.js';
-import { findOpenByGroup, setStatus } from './matches.js';
+import { findOpenByGroup, findRunningByGroup, setStatus } from './matches.js';
+import { finishMatch } from './finish.js';
 import { countActive } from './players.js';
 import { getPack } from './packLoader.js';
 import { unpinCard } from './cards.js';
@@ -71,6 +72,7 @@ async function help(msg) {
     lines.push('', '👑 <b>مخصوص ادمین‌ها</b>', LINE,
       '🎮 /newmatch — ساخت مچ جدید',
       '▶️ /forcematch — شروع اجباری مچ',
+      '⏹ /finish — پایان فوری مچ در حال اجرا',
       '❌ /cancelmatch — لغو مچ باز');
   }
   return send(msg.chat.id, lines.join('\n'),replyOptions);
@@ -138,9 +140,22 @@ async function forcematch(msg) {
   return startMatch(match, '🛠 موتور بازی هنوز وصل نشده (فاز بعدی)');
 }
 
+// End a running match right now (e.g. for testing, or when the team is stuck).
+// Concludes as a failed escape: scores/XP are still awarded from the event log,
+// the result is announced in the group and the Mini App shows the end screen.
+async function finish(msg) {
+  const replyOptions = { reply_to_message_id: msg.message_id,};
+  const match = await findRunningByGroup(msg.chat.id);
+  if (!match) return send(msg.chat.id, '🔎 مچ در حال اجرایی وجود نداره (با /forcematch شروعش کن)',replyOptions);
+  const out = await finishMatch(match);
+  if (!out.ok) return send(msg.chat.id, out.text,replyOptions);
+  return send(msg.chat.id, '🏁 بازی تمام شد؛ نتیجه‌ها رو بالای همین پیام ببین',replyOptions);
+}
+
 export const COMMANDS = {
   start, help, profile, ranklist,testapp,
   newmatch: guard({ group: true, admin: true }, begin),
   cancelmatch: guard({ group: true, admin: true }, cancelmatch),
   forcematch: guard({ group: true, admin: true }, forcematch),
+  finish: guard({ group: true, admin: true }, finish),
 };
