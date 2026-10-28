@@ -4,6 +4,7 @@ import { roomErrors, isInteractive } from './engine.js';
 const REQUIRED = ['theme', 'name', 'min_players', 'max_players', 'lobby', 'rooms', 'variants'];
 const HOTSPOT_TYPES = ['door', 'clue', 'lock'];
 
+// Legacy hotspot-only rooms (no `objects`).
 function sceneErrors(label, scene, roomIds) {
   const errs = [];
   const seen = new Set();
@@ -25,21 +26,37 @@ export function validatePack(p) {
   if (errs.length) return errs;
 
   const roomIds = Object.keys(p.rooms);
-  errs.push(...sceneErrors('lobby', p.lobby, roomIds));
-  if ((p.lobby.hotspots ?? []).filter((h) => h.type === 'lock').length !== 1) {
-    errs.push('lobby needs exactly one "lock" hotspot');
-  }
+
+  // The lobby is an interactive "hub" room; the other rooms are interactive or legacy hotspot scenes.
+  if (isInteractive(p.lobby)) errs.push(...roomErrors('lobby', p.lobby, { hub: true, roomIds }));
+  else errs.push('lobby must be an interactive room (views + objects)');
+
   for (const [id, r] of Object.entries(p.rooms)) {
-    // Interactive rooms (views + objects) are checked by the engine; the rest are hotspot scenes.
-    errs.push(...(isInteractive(r) ? roomErrors(id, r) : sceneErrors(id, r, roomIds)));
+    errs.push(...(isInteractive(r) ? roomErrors(id, r, { roomIds }) : sceneErrors(id, r, roomIds)));
     const okDigits = Array.isArray(r.digits) && r.digits.every((d) => Number.isInteger(d) && d >= 0 && d <= 9);
     if (!okDigits) errs.push(`${id}: digits must be an array of integers 0-9`);
   }
+
+  // requires / sets / win references: "obj" = same room, "room.obj" = any room (lobby included)
+  const all = { lobby: p.lobby, ...p.rooms };
+  const refOk = (rid, ref) => {
+    const [tr, to] = String(ref).includes('.') ? String(ref).split('.') : [rid, ref];
+    return !!all[tr]?.objects?.[to];
+  };
+  for (const [rid, r] of Object.entries(all)) {
+    if (!isInteractive(r)) continue;
+    for (const [oid, o] of Object.entries(r.objects)) {
+      for (const ref of o.requires || []) if (!refOk(rid, ref)) errs.push(`${rid}.${oid}: requires unknown "${ref}"`);
+      for (const k of Object.keys(o.sets || {})) if (!refOk(rid, k)) errs.push(`${rid}.${oid}: sets unknown "${k}"`);
+    }
+  }
+
   for (const [cap, v] of Object.entries(p.variants)) {
     const n = Number(cap);
-    const unknown = (v.rooms ?? []).filter((r) => !roomIds.includes(r));
+    const vr = v.rooms ?? [];
+    const unknown = vr.filter((r) => !roomIds.includes(r));
     if (unknown.length) { errs.push(`variant ${n}: unknown rooms ${unknown.join(',')}`); continue; }
-    const total = v.rooms.reduce((s, r) => s + (p.rooms[r].digits?.length ?? 0), 0);
+    const total = vr.reduce((s, r) => s + (p.rooms[r].digits?.length ?? 0), 0);
     if (total !== n) errs.push(`variant ${n}: active rooms hold ${total} digits, lock needs ${n}`);
     if (!(v.minutes > 0)) errs.push(`variant ${n}: minutes must be > 0`);
   }
@@ -79,18 +96,10 @@ export function getVariant(pack, n) {
   };
 }
 
+// Legacy hotspot scenes only: hide doors that lead to rooms inactive for this team size.
 export const stripScene = (scene, active) => ({
   name_fa: scene.name_fa,
   image: scene.image,
   bg: scene.bg,
-  // hide doors that lead to rooms inactive for this team size
   hotspots: (scene.hotspots ?? []).filter((h) => h.type !== 'door' || h.to === 'lobby' || active.includes(h.to)),
 });
-
-// What the Mini App may see: scenes + hotspots + clue content. Never the digits.
-export function publicView(pack, n) {
-  const v = getVariant(pack, n);
-  const scenes = { lobby: stripScene(pack.lobby, v.rooms) };
-  for (const id of v.rooms) scenes[id] = stripScene(pack.rooms[id], v.rooms);
-  return { name: pack.name, minutes: v.minutes, lockLength: n, scenes };
-}

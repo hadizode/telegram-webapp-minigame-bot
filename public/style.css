@@ -1,42 +1,73 @@
-:root{--bg:#0e1112;--panel:#171b1d;--line:#2b3236;--text:#e9ecee;--dim:#8d979d;--acc:#e8b04a;color-scheme:dark}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;margin:0}
+:root{--bg:#000;--panel:#171b1dee;--line:#2b3236;--text:#e9ecee;--dim:#8d979d;--acc:#e8b04a;
+  --top:calc(var(--tg-safe-area-inset-top,0px) + env(safe-area-inset-top,0px));
+  --bot:calc(var(--tg-safe-area-inset-bottom,0px) + env(safe-area-inset-bottom,0px));
+  color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
+html,body{height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);
+  font:15px/1.5 Vazirmatn,Tahoma,system-ui,sans-serif;user-select:none}
+button{font:inherit;color:var(--text);background:#242a2d;border:1px solid var(--line);border-radius:10px;padding:6px 12px;cursor:pointer}
+img{border:0;outline:0}
+img:not([src]),img[src=""]{display:none}
 
-/* چیدمان افقی: هدر بالا، صحنه سمت چپ، کوله و لاگ ستون راست */
-body{display:grid;grid-template-columns:1fr 170px;grid-template-rows:auto 1fr;background:var(--bg);color:var(--text);font:15px/1.5 Vazirmatn,Tahoma,system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
-header{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:4px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
-header #digits{margin-inline-start:auto;color:var(--acc);letter-spacing:.2em;direction:ltr}
-main{grid-column:1;grid-row:2;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
-footer{grid-column:2;grid-row:2;min-height:0;overflow-y:auto;background:var(--panel);border-inline-start:1px solid var(--line);padding:8px 12px}
-
-button{font:inherit;color:var(--text);background:#242a2d;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
-
-#stage{position:relative;line-height:0;max-width:100%;color:var(--dim)}
-#stage>img{display:block;max-width:100%;max-height:calc(100dvh - 48px);width:auto;height:auto;user-select:none}
-#stage>img.layer{position:absolute;max-width:none;max-height:none;pointer-events:none;user-select:none}
+/* main image: the whole screen */
+main{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#stage{position:relative;line-height:0;color:var(--dim)}
+#stage>img{display:block;max-width:100vw;max-height:100dvh;width:auto;height:auto;user-select:none;-webkit-user-drag:none}
+#stage>img.layer{position:absolute;max-width:none;max-height:none;pointer-events:none}
 
 .obj{position:absolute;padding:0;border:0;background:transparent;border-radius:0;-webkit-appearance:none;appearance:none;margin:0;box-shadow:none;outline:none}
 .obj:focus,.obj:focus-visible,.obj:active{outline:none;box-shadow:none}
 .obj img{width:100%;height:100%;object-fit:fill;pointer-events:none;display:block}
-.obj span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 min(6vw,34px)/1 ui-monospace,Consolas,monospace;color:#7dff9b;text-shadow:0 0 10px #3cff7a}
+.obj span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 min(4vw,30px)/1 ui-monospace,Consolas,monospace;color:#7dff9b;text-shadow:0 0 10px #3cff7a}
 .debug .obj{outline:1.5px dashed var(--acc)}
 
-#toast{position:fixed;left:12px;right:182px;bottom:12px;background:#20262a;border:1px solid var(--line);border-radius:10px;padding:10px 14px;text-align:center;z-index:10}
-#toast.bad{border-color:#e5484d}
-#banner{position:fixed;left:12px;right:182px;bottom:12px;background:#1d2a20;border:1px solid #3d7a4d;border-radius:12px;padding:14px;text-align:center;z-index:10}
-#banner p{margin:0 0 6px}
-#banner strong{display:block;font-size:40px;color:#7dff9b}
-
-#inv{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;color:var(--dim)}
-.item{display:flex;align-items:center;gap:6px}
-.item img{height:22px;width:auto}
-.item.sel{border-color:var(--acc);background:#33290f}
-#log{font-size:12px;color:var(--dim)}
-#log .snd{padding:0 8px;font-size:12px}
-
-/* hotspot scenes (lobby + simple rooms) */
-#stage.simple{position:relative;aspect-ratio:16/9;width:min(calc(100vw - 170px),calc((100dvh - 48px)*16/9));overflow:hidden}
+/* hotspot scenes (legacy rooms) */
+#stage.simple{aspect-ratio:16/9;width:min(100vw,calc(100dvh*16/9));overflow:hidden}
 #stage.simple>img{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover}
 .hs{position:absolute;display:flex;align-items:center;justify-content:center;padding:2px;font-size:12px;line-height:1.3;text-align:center;border:1.5px solid rgba(232,176,74,.55);background:rgba(10,12,13,.45);border-radius:6px}
 .hs.lock{border-color:#e5484d}
 .hs.clue{border-style:dashed}
+
+/* a view whose image is missing: an empty stage so the objects stay clickable */
+#stage.noimg{width:min(100vw,calc(100dvh*16/9));aspect-ratio:16/9;background:#1b1f2a}
+#stage.noimg .obj{outline:1.5px dashed var(--acc)}
+
+/* HUD: a small pill at the top centre; Telegram's buttons sit on both sides */
+#hud{position:fixed;top:calc(var(--top) + 8px);left:50%;transform:translateX(-50%);z-index:5;
+  display:flex;gap:10px;align-items:center;padding:4px 14px;border-radius:20px;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(6px);font-size:13px;white-space:nowrap;pointer-events:none}
+#digits{color:var(--acc);letter-spacing:.2em;direction:ltr}
+
+/* notifications */
+#toasts{position:fixed;top:calc(var(--top) + 52px);left:50%;transform:translateX(-50%);z-index:50;
+  display:flex;flex-direction:column;align-items:center;gap:6px;width:min(90vw,420px);pointer-events:none}
+.toast{pointer-events:auto;background:rgba(20,24,27,.92);border:1px solid var(--line);border-radius:12px;
+  padding:8px 14px;text-align:center;font-size:14px;animation:tin .25s ease-out;transition:opacity .4s,transform .4s}
+.toast.bad{border-color:#e5484d}
+.toast.out{opacity:0;transform:translateY(-10px)}
+.toast .snd{margin-inline-start:8px;padding:0 8px;font-size:12px}
+@keyframes tin{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:none}}
+
+/* inventory: floating button + popup panel */
+#dock{position:fixed;left:12px;bottom:calc(var(--bot) + 12px);z-index:10;display:flex;gap:8px;align-items:center}
+#bag{position:relative;width:48px;height:48px;font-size:22px;padding:0;border-radius:50%;background:var(--panel)}
+#bagN{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;border-radius:10px;background:var(--acc);color:#000;font-size:12px;line-height:20px}
+#selchip{background:#33290f;border-color:var(--acc);border-radius:20px}
+#invPanel{position:fixed;left:12px;bottom:calc(var(--bot) + 70px);z-index:10;max-width:min(80vw,360px);
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:10px;backdrop-filter:blur(8px);animation:tin .2s ease-out}
+#inv{display:flex;flex-wrap:wrap;gap:6px;color:var(--dim)}
+.item{display:flex;align-items:center;gap:6px}
+.item img{height:22px;width:auto}
+.item.sel{border-color:var(--acc);background:#33290f}
+
+/* room solved */
+#banner{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:min(86vw,380px);
+  background:#1d2a20f2;border:1px solid #3d7a4d;border-radius:14px;padding:16px;text-align:center;animation:tin .3s ease-out}
+#banner p{margin:0 0 6px}
+#banner strong{display:block;font-size:40px;color:#7dff9b;margin-bottom:8px}
+
+/* full-screen picture (action "show"): tap anywhere to close */
+#viewer{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.94);display:flex;align-items:center;justify-content:center;
+  padding:var(--top) 0 var(--bot);animation:vin .2s ease-out}
+#viewer img{max-width:100vw;max-height:100%;object-fit:contain;-webkit-user-drag:none}
+@keyframes vin{from{opacity:0}to{opacity:1}}

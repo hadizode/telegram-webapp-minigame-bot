@@ -1,4 +1,4 @@
 // Register each pack here (no filesystem at runtime).
-import demo from './demo.js';
+import hospital from './hospital.js';
 
-export const PACKS = { demo };
+export const PACKS = { hospital };

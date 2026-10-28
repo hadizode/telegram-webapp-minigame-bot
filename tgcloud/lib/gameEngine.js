@@ -16,6 +16,6 @@ export async function onMatchStart(matchId) {
     '━━━━━━━━━━━━━━',
     escapeHtml(pack.intro_fa || 'وارد لابی بشید، اتاق‌ها رو بگردید و رقم‌های قفل خروج رو پیدا کنید.'),
   ].join('\n'), {
-    reply_markup: { inline_keyboard: [[{ text: '🚪 ورود به لابی', url: `https://t.me/${me.username}?startapp=m${matchId}` }]] },
+    reply_markup: { inline_keyboard: [[{ text: '🚪 ورود به لابی',url: `https://t.me/${me.username}?startapp=m${matchId}&mode=fullscreen` }]] },
   });
 }

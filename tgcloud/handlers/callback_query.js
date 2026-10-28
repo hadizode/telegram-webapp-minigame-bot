@@ -4,7 +4,6 @@ import { handleMatchAction } from '../lib/matchActions.js';
 import { sendProfileByTgId } from '../lib/commands.js';
 import { tryApi } from '../lib/tg.js';
 import { isChannelMember, JOIN_TEXT } from '../lib/channel.js';
-import { closeAbandoned } from '../lib/presence.js';
 
 const ROUTES = [
   [/^nm:(pack|cap|confirm|cancel|refresh):/, (c, d) => handleWizard(c, d.split(':'))],
@@ -13,7 +12,6 @@ const ROUTES = [
 ];
 
 export default async function (cq) {
-  await closeAbandoned();
   if (!(await isChannelMember(cq.from.id))){
     return tryApi(() => api.answerCallbackQuery({
       callback_query_id: cq.id, text:JOIN_TEXT, show_alert:true,

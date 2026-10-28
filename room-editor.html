@@ -1,224 +1,984 @@
 <!doctype html>
-<html lang="fa" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ویرایشگر اتاق</title>
+<title>Pack Editor</title>
 <style>
-:root{--bg:#16181a;--panel:#1f2326;--line:#343a3f;--text:#e6e8ea;--dim:#9aa3aa;--acc:#e8b04a;--sel:#4cc2ff;color-scheme:dark}
+:root{--bg:#14161a;--panel:#1c2024;--line:#32383e;--text:#e6e8ea;--dim:#97a0a8;--acc:#e8b04a;--sel:#4cc2ff;--bad:#ff6369;--ok:#5fd38a;color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Vazirmatn,Tahoma,system-ui,sans-serif;display:grid;grid-template-columns:340px 1fr;height:100vh}
-aside{background:var(--panel);border-inline-end:1px solid var(--line);overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
-h1{font-size:17px;margin:0}
-h2{font-size:13px;margin:10px 0 0;color:var(--dim);font-weight:600}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:13px/1.45 system-ui,Segoe UI,sans-serif;display:grid;grid-template-columns:310px 1fr 350px;grid-template-rows:auto minmax(0,1fr)}
+header{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--line)}
+aside{background:var(--panel);overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;min-height:0}
+#left{border-right:1px solid var(--line)}
+#right{border-left:1px solid var(--line)}
+h2,summary{font-size:12px;margin:12px 0 0;color:var(--acc);text-transform:uppercase;letter-spacing:.06em;font-weight:700;cursor:default}
+summary{cursor:pointer}
+details{display:flex;flex-direction:column;gap:8px}
+details>summary{margin-bottom:6px}
 .dim{color:var(--dim);font-size:12px;margin:0}
-label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--dim)}
-input,select,textarea,button,.btn{font:inherit;color:var(--text);background:#2a2f33;border:1px solid var(--line);border-radius:6px;padding:6px 8px}
-input,select,textarea{width:100%}
-textarea{resize:vertical;direction:ltr;font-family:ui-monospace,Consolas,monospace;font-size:12px}
-textarea.bad{border-color:#e5484d}
+.sp{flex:1}.sep{width:1px;height:20px;background:var(--line)}
+input,select,textarea,button,.btn{font:inherit;color:var(--text);background:#262b30;border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+input,select,textarea{width:100%;min-width:0}
+input[type=checkbox]{width:auto}
+textarea{resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+textarea.bad{border-color:var(--bad)}
 button,.btn{cursor:pointer;text-align:center}
 button:hover,.btn:hover{border-color:var(--acc)}
 button.on{border-color:var(--sel);background:#23323b}
 button.danger{color:#ff8a8d}
+button.x{padding:2px 8px;color:#ff8a8d}
 .row{display:flex;flex-wrap:wrap;gap:6px}
 .row>*{flex:1}
-.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.grid4 input{padding:6px 4px;direction:ltr}
-main{direction:ltr;overflow:auto;padding:16px}
-.stage{position:relative;display:inline-block;line-height:0;outline:1px solid var(--line)}
-.stage>img{display:block;max-width:100%;max-height:calc(100vh - 40px);width:auto;height:auto;user-select:none}
-.ov{position:absolute;inset:0;cursor:crosshair;touch-action:none}
-.box{position:absolute;border:1.5px dashed var(--acc);background:rgba(232,176,74,.12);cursor:move}
-.box.sel{border:2px solid var(--sel);background:rgba(76,194,255,.15)}
-.box img{width:100%;height:100%;object-fit:fill;opacity:.85;pointer-events:none}
-.lbl{position:absolute;left:0;top:-1.4em;font:11px/1.4 ui-monospace,Consolas,monospace;background:#000b;padding:0 4px;white-space:nowrap;pointer-events:none}
-.hnd{display:none;position:absolute;right:-6px;bottom:-6px;width:12px;height:12px;background:var(--sel);cursor:nwse-resize}
-.box.sel .hnd{display:block}
+label.f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--dim)}
+label.chk{display:flex;flex-direction:row;gap:6px;align-items:center;color:var(--text);font-size:12px}
+label.inl{display:flex;flex-direction:row;gap:6px;align-items:center;font-size:12px;color:var(--dim)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.card{border:1px solid var(--line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.multi{max-height:170px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:4px 6px}
+.kv{display:flex;flex-direction:column;gap:4px}
+.kvr{display:grid;grid-template-columns:1fr 1fr auto;gap:4px}
+.kvc{display:grid;grid-template-columns:90px 1fr auto;gap:4px;align-items:start}
+.kvr2{display:grid;grid-template-columns:1fr auto;gap:4px}
+.imgpick{display:flex;flex-direction:column;gap:4px}
+.prob{text-align:left;border-color:#5a3a3d;color:#ffb3b5}
+.prob.warn{border-color:#5a4d2e;color:#ffd98a}
+.good{color:var(--ok);margin:0}
+
+main{position:relative;overflow:hidden;min-height:0}
+main.pan,main.pan .ov{cursor:grab!important}
+.empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;text-align:center;color:var(--dim);margin:0}
+.stage{position:absolute;left:0;top:0;transform-origin:0 0;line-height:0;outline:1px solid var(--line);user-select:none}
+.stage>img{display:block;width:100%;height:auto;-webkit-user-drag:none}
+.ov{position:absolute;inset:0;touch-action:none}
+.ov.draw{cursor:crosshair}
+.sv{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.poly{fill:rgba(232,176,74,.14);stroke:var(--acc);stroke-width:1.5;stroke-dasharray:5 3;vector-effect:non-scaling-stroke;pointer-events:visiblePainted;cursor:move}
+.poly.sel{fill:rgba(76,194,255,.2);stroke:var(--sel);stroke-width:2;stroke-dasharray:none}
+.draftline{fill:rgba(255,255,255,.08);stroke:#fff;stroke-width:1.5;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+.prev{position:absolute;pointer-events:none;opacity:.85}
+.lbl{position:absolute;transform:translateY(-100%) scale(var(--k,1));transform-origin:0 100%;font:11px/1.4 ui-monospace,Consolas,monospace;background:#000b;padding:0 4px;white-space:nowrap;pointer-events:none}
+.hnd{position:absolute;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:var(--sel);border:2px solid #000;cursor:grab;transform:scale(var(--k,1))}
+.hnd.d{background:#fff;cursor:crosshair}
+.hnd::after{content:attr(data-n);position:absolute;left:12px;top:-8px;font:10px/1 system-ui;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000}
 .ghost{position:absolute;border:1.5px dashed #fff;pointer-events:none}
-.empty{direction:rtl;color:var(--dim);padding:40px}
 </style>
 </head>
 <body>
-<aside>
-  <h1>ویرایشگر اتاق</h1>
-  <p class="dim">کشیدن روی تصویر: شیء جدید · کشیدن شیء: جابجایی · گوشه‌ی آبی: تغییر اندازه · فلش‌ها: جابجایی دقیق (Shift = بزرگ‌تر) · Delete: حذف</p>
-  <div class="row">
-    <label class="btn">افزودن تصاویر<input type="file" id="imgs" multiple accept="image/*" hidden></label>
-    <label class="btn">باز کردن فایل اتاق<input type="file" id="cfg" accept=".js,.json,.txt" hidden></label>
+<header>
+  <b>Pack Editor</b>
+  <label class="btn">Load asset folder<input type="file" id="dir" webkitdirectory multiple hidden></label>
+  <label class="btn">Add files<input type="file" id="imgs" multiple accept="image/*,audio/*" hidden></label>
+  <label class="btn">Open pack file<input type="file" id="pfile" accept=".js,.json,.txt" hidden></label>
+  <label class="btn">Import room files<input type="file" id="roomfiles" multiple accept=".js,.json,.txt" hidden></label>
+  <span class="sep"></span>
+  <button data-tool="select">Select (V)</button>
+  <button data-tool="quad">Quad (Q)</button>
+  <button data-tool="rect">Rect (R)</button>
+  <span class="sep"></span>
+  <button id="fit">Fit (F)</button><span id="zlab" class="dim">100%</span>
+  <label class="inl"><input type="checkbox" id="showimgs" checked> Object images</label>
+  <span class="sp"></span>
+  <span id="hint" class="dim"></span>
+  <button id="copy">Copy pack</button>
+  <button id="dl">Download pack</button>
+  <button id="reset" class="danger">New pack</button>
+</header>
+
+<aside id="left">
+  <details open>
+    <summary>Assets</summary>
+    <label class="f">Path prefix added to loaded files (usually empty)<input id="pfx" placeholder=""></label>
+    <p class="dim" id="assetinfo"></p>
+    <p class="dim">Pick the folder that lives inside public/ (e.g. pack1) or public itself. Paths are built automatically.</p>
+  </details>
+
+  <details open>
+    <summary>Pack</summary>
+    <label class="f">Pack id (file name, e.g. hospital)<input id="pid"></label>
+    <label class="f">Name<input id="pname" dir="auto"></label>
+    <div class="grid2">
+      <label class="f">Theme<input id="ptheme"></label>
+      <label class="f">Theme (display)<input id="pthemefa" dir="auto"></label>
+      <label class="f">Min players<input id="pmin" type="number" min="1" max="5"></label>
+      <label class="f">Max players<input id="pmax" type="number" min="1" max="5"></label>
+    </div>
+    <label class="f">Intro text (shown when the match starts)<input id="pintro" dir="auto"></label>
+  </details>
+
+  <h2>Rooms</h2>
+  <div class="row" id="rooms"></div>
+  <div class="row" id="roomActs">
+    <button id="rrename">Rename room</button>
+    <button id="rdel" class="danger">Delete room</button>
   </div>
-  <label>مسیر نسبی پوشه‌ی تصاویر (اختیاری، از محل همین فایل)<input id="src" dir="ltr" placeholder="../public/"></label>
-  <label>پیشوند مسیر تصویر در خروجی<input id="prefix" dir="ltr" placeholder="rooms/power/"></label>
-  <label>شناسه‌ی اتاق<input id="rid" dir="ltr"></label>
-  <h2>نماها</h2>
+
+  <h2 id="roomTitle">Room</h2>
+  <label class="f">Display name (name_fa)<input id="rname" dir="auto"></label>
+  <label class="f">Background color<input id="rbg" placeholder="#1b1f2a"></label>
+  <label class="f" id="digRow">Digits (comma separated, 0-9)<input id="rdigits" placeholder="2"></label>
+  <label class="f">Start view<select id="rstart"></select></label>
+
+  <h2>Views</h2>
   <div class="row" id="views"></div>
-  <div id="viewForm" class="row"></div>
-  <h2>اشیاء این نما</h2>
-  <div class="row" id="objs"></div>
-  <h2>مشخصات شیء</h2>
-  <div id="props" style="display:flex;flex-direction:column;gap:8px"></div>
-  <h2>خروجی</h2>
-  <textarea id="out" rows="10" readonly></textarea>
-  <div class="row"><button id="copy">کپی</button><button id="dl">دانلود</button><button id="reset" class="danger">شروع از نو</button></div>
-  <datalist id="acts"><option>examine</option><option>pickup</option><option>place</option><option>play</option><option>open</option><option>use</option><option>toggle</option></datalist>
+  <div id="viewForm" style="display:flex;flex-direction:column;gap:6px"></div>
+
+  <h2>Items</h2>
+  <div id="items" style="display:flex;flex-direction:column;gap:6px"></div>
+
+  <h2>Win condition</h2>
+  <div id="win" style="display:flex;flex-direction:column;gap:6px"></div>
+
+  <details open>
+    <summary>Variants (team sizes)</summary>
+    <div id="variants" style="display:flex;flex-direction:column;gap:6px"></div>
+  </details>
+
+  <details open>
+    <summary id="probTitle">Problems</summary>
+    <div id="probs" style="display:flex;flex-direction:column;gap:4px"></div>
+  </details>
+
+  <details>
+    <summary>Output (whole pack)</summary>
+    <textarea id="out" rows="14" readonly></textarea>
+  </details>
+
+  <datalist id="itemlist"></datalist>
+  <datalist id="audiolist"></datalist>
+  <datalist id="statelist"><option>done</option><option>taken</option><option>on</option><option>off</option><option>open</option></datalist>
 </aside>
+
 <main id="main"></main>
+
+<aside id="right">
+  <h2 style="margin-top:0">Objects in this view</h2>
+  <div class="row" id="objs"></div>
+  <h2>Properties</h2>
+  <div id="props" style="display:flex;flex-direction:column;gap:8px"></div>
+</aside>
+
 <script>
 const $=id=>document.getElementById(id);
-const el=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
-const r=v=>Math.round(v*10)/10, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e};
+const r1=v=>Math.round(v*10)/10, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const base=p=>String(p||'').split('/').pop();
-const S={room:{id:'power',views:{},objects:{}},files:{},view:null,sel:null,prefix:'',src:''};
-const KNOWN=['view','x','y','w','h','action','image'];
-const imgUrl=p=>!p?'':S.files[base(p)]||(S.src?S.src+p:'');
-const draft=()=>{try{localStorage.setItem('roomEditorDraft',JSON.stringify({room:S.room,prefix:S.prefix,src:S.src}))}catch{}};
-try{const d=JSON.parse(localStorage.getItem('roomEditorDraft')||'null');if(d&&d.room){S.room=d.room;S.prefix=d.prefix||'';S.src=d.src||''}}catch{}
-S.room.views=S.room.views||{};S.room.objects=S.room.objects||{};S.view=Object.keys(S.room.views)[0]||null;
+const NS='http://www.w3.org/2000/svg';
+const ACTIONS=['examine','play','pickup','place','use','toggle','goto','door','lock','show'];
+const KEYS=['view','x','y','w','h','poly','action','to','popup','item','accepts','requires','sets','setState','decoy','hidden','text','failText','doneText','audio','image','images','labels'];
+const ROOM_KEYS=['name_fa','bg','digits','start','items','win','views','objects'];
+const HINTS={select:'Click a shape to select. Drag it to move, drag blue dots to reshape.',quad:'Click 4 corners. Backspace = undo point, Esc = cancel.',rect:'Drag to draw a rectangle.'};
+const INPUTS=['INPUT','TEXTAREA','SELECT'];
+const CAPS=[2,3,4,5];
 
-function label(t,c){const l=el('label');const s=el('span');s.textContent=t;l.append(s,c);return l}
-function imgSelect(cur,cb){
-  const s=el('select');
-  const opts=[['','— بدون تصویر —'],...Object.keys(S.files).map(n=>[S.prefix+n,n])];
-  if(cur&&!opts.some(o=>o[0]===cur))opts.push([cur,cur]);
-  opts.forEach(([v,t])=>{const o=el('option');o.value=v;o.textContent=t;s.append(o)});
-  s.value=cur||'';s.onchange=()=>cb(s.value);return s;
-}
+const blankRoom=()=>({name_fa:'',bg:'#1b1f2a',digits:[],start:'',items:{},win:{requires:[],text:''},views:{},objects:{}});
+const blankPack=()=>({id:'pack',name:'',theme:'',theme_fa:'',min_players:2,max_players:5,intro_fa:'',rooms:{lobby:blankRoom()},variants:{}});
+const S={
+  pack:blankPack(),rid:'lobby',files:{},byBase:{},view:null,sel:null,prefix:'',
+  tool:'select',draft:[],cursor:null,ghost:null,showImgs:true,
+  get room(){return this.pack.rooms[this.rid]},
+};
+const V={z:1,x:0,y:0,ar:16/9,base:[0,0],space:false,key:''};
+const ARC={};
+
+const key=k=>/^[A-Za-z_$][\w$]*$/.test(k)?k:JSON.stringify(k);
+const isHub=()=>S.rid==='lobby';
+const splitRef=(rid,ref)=>String(ref).includes('.')?String(ref).split('.'):[rid,ref];
 const objsOf=v=>Object.entries(S.room.objects).filter(([,o])=>o.view===v);
 const uniq=p=>{let n=1;while(S.room.objects[p+n])n++;return p+n};
+const isAudio=n=>/\.(mp3|ogg|wav|m4a|aac|opus)$/i.test(n);
+const imgNames=()=>Object.keys(S.files).filter(n=>!isAudio(n));
+const audioNames=()=>Object.keys(S.files).filter(isAudio);
+const imgPath=v=>v&&typeof v==='object'?v.image||'':v||'';
+const imgUrl=p=>{p=imgPath(p);return !p?'':S.files[p]||S.byBase[base(p)]||''};
+const setProp=(o,k,v)=>{if(v===''||v===undefined||v===null||v===false)delete o[k];else o[k]=v};
+const save=()=>{try{localStorage.setItem('packEditorDraft1',JSON.stringify({pack:S.pack,rid:S.rid,prefix:S.prefix}))}catch{}};
 
-function renderTop(){
-  $('rid').value=S.room.id||'';$('prefix').value=S.prefix;$('src').value=S.src;
-  const vs=$('views');vs.innerHTML='';
-  Object.keys(S.room.views).forEach(k=>{const b=el('button',k===S.view?'on':'');b.textContent=k;b.onclick=()=>{S.view=k;S.sel=null;render()};vs.append(b)});
-  const add=el('button');add.textContent='+ نمای جدید';
-  add.onclick=()=>{const n=(prompt('نام نما (مثلا room یا box_open)')||'').trim();if(!n||S.room.views[n])return;S.room.views[n]={image:''};S.view=n;S.sel=null;render()};
-  vs.append(add);
-  const vf=$('viewForm');vf.innerHTML='';
-  if(S.view){
-    const v=S.room.views[S.view];
-    const d=el('button','danger');d.textContent='حذف این نما';
-    d.onclick=()=>{if(!confirm('اشیاء این نما هم حذف می‌شن. مطمئنی؟'))return;
-      objsOf(S.view).forEach(([k])=>delete S.room.objects[k]);delete S.room.views[S.view];
-      S.view=Object.keys(S.room.views)[0]||null;S.sel=null;render()};
-    vf.append(label('تصویر نما',imgSelect(v.image,val=>{v.image=val;render()})),d);
+// ---------- geometry ----------
+function sync(o){
+  const xs=o.poly.map(p=>p[0]),ys=o.poly.map(p=>p[1]);
+  o.x=r1(Math.min(...xs));o.y=r1(Math.min(...ys));
+  o.w=r1(Math.max(...xs)-Math.min(...xs));o.h=r1(Math.max(...ys)-Math.min(...ys));
+}
+const rectPoly=(x,y,w,h)=>[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(p=>p.map(r1));
+function isRect(o){
+  const xs=o.poly.map(p=>p[0]),ys=o.poly.map(p=>p[1]);
+  return new Set(o.poly.map(p=>p.join())).size===4&&new Set(xs).size===2&&new Set(ys).size===2;
+}
+function normRoom(o){
+  o=o||{};
+  const R=Object.assign(blankRoom(),o);
+  delete R.id;
+  R.views=o.views||{};R.objects=o.objects||{};R.items=o.items||{};
+  R.win=o.win||{};R.win.requires=R.win.requires||[];R.win.text=R.win.text||'';R.digits=o.digits||[];
+  for(const b of Object.values(R.objects)){
+    if(Array.isArray(b.poly)&&b.poly.length===4)sync(b);
+    else b.poly=rectPoly(b.x||0,b.y||0,b.w||5,b.h||5);
+  }
+  return R;
+}
+function selectRoom(k){
+  S.rid=k;const R=S.room;
+  S.view=R.start&&R.views[R.start]?R.start:Object.keys(R.views)[0]||null;
+  S.sel=null;S.draft=[];
+}
+function adoptPack(p){
+  const P=blankPack();
+  for(const k of ['id','name','theme','theme_fa','min_players','max_players','intro_fa'])if(p[k]!==undefined)P[k]=p[k];
+  const skipped=[];
+  if(p.lobby&&typeof p.lobby.objects==='object')P.rooms.lobby=normRoom(p.lobby);else skipped.push('lobby');
+  for(const [k,r] of Object.entries(p.rooms||{})){
+    if(r&&typeof r.objects==='object')P.rooms[k]=normRoom(r);else skipped.push(k);
+  }
+  for(const [n,v] of Object.entries(p.variants||{}))P.variants[n]={rooms:[...(v.rooms||[])],minutes:v.minutes||10};
+  S.pack=P;selectRoom('lobby');
+  if(skipped.length)alert('Skipped (not interactive rooms, rebuild them here): '+skipped.join(', '));
+}
+
+// ---------- references across rooms ----------
+// fn(ownerRoomId, ref) -> new ref, or null to drop it
+function rewrite(fn){
+  for(const [rid,R] of Object.entries(S.pack.rooms)){
+    for(const o of Object.values(R.objects)){
+      if(o.requires)o.requires=o.requires.map(r=>fn(rid,r)).filter(Boolean);
+      if(o.sets){const n={};for(const [k,v] of Object.entries(o.sets)){const k2=fn(rid,k);if(k2)n[k2]=v}o.sets=n}
+    }
+    R.win.requires=R.win.requires.map(r=>fn(rid,r)).filter(Boolean);
   }
 }
-
-function place(k){
-  const o=S.room.objects[k],b=document.querySelector(`.box[data-k="${CSS.escape(k)}"]`);
-  if(b)b.style.cssText=`left:${o.x}%;top:${o.y}%;width:${o.w}%;height:${o.h}%`;
+// every object that can be referenced from the current room: plain id = this room, "room.id" = other room
+function refList(self){
+  const cur=[],oth=[];
+  for(const [rid,R] of Object.entries(S.pack.rooms)){
+    for(const [id,o] of Object.entries(R.objects)){
+      if(rid===S.rid){if(id!==self)cur.push([id,`${id}  (${o.view})`])}
+      else oth.push([`${rid}.${id}`,`${rid}.${id}`]);
+    }
+  }
+  return [...cur,...oth];
 }
-function renderStage(){
-  const m=$('main');m.innerHTML='';
-  const v=S.room.views[S.view];
-  if(!v){m.innerHTML='<p class="empty">اول تصاویر رو اضافه کن، بعد یه نما بساز.</p>';return}
-  const url=imgUrl(v.image);
-  if(!url){m.innerHTML='<p class="empty">برای این نما تصویری انتخاب نشده یا فایلش پیدا نشد. تصویر رو با «افزودن تصاویر» بیار یا مسیر نسبی رو تنظیم کن.</p>';return}
-  const st=el('div','stage'),im=el('img');im.src=url;im.draggable=false;
-  im.onerror=()=>{m.innerHTML='<p class="empty">تصویر بارگذاری نشد: '+v.image+'</p>'};
-  const ov=el('div','ov');st.append(im,ov);m.append(st);
-  objsOf(S.view).forEach(([k,o])=>{
-    const b=el('div','box'+(k===S.sel?' sel':''));b.dataset.k=k;
-    b.style.cssText=`left:${o.x}%;top:${o.y}%;width:${o.w}%;height:${o.h}%`;
-    const u=imgUrl(o.image);if(u){const i=el('img');i.src=u;i.draggable=false;b.append(i)}
-    const l=el('span','lbl');l.textContent=k;b.append(l,el('i','hnd'));ov.append(b);
+
+// ---------- zoom / pan ----------
+function fit(){
+  const m=$('main'),st=document.querySelector('.stage');if(!st)return;
+  const W=Math.max(50,Math.min(m.clientWidth-24,(m.clientHeight-24)*V.ar));
+  st.style.width=W+'px';
+  V.base=[(m.clientWidth-W)/2,(m.clientHeight-W/V.ar)/2];
+  st.style.visibility=st.dataset.ready?'visible':'hidden';
+  applyView();
+}
+function applyView(){
+  const st=document.querySelector('.stage');if(!st)return;
+  st.style.transform=`translate(${V.base[0]+V.x}px,${V.base[1]+V.y}px) scale(${V.z})`;
+  st.style.setProperty('--k',1/V.z);
+  $('zlab').textContent=Math.round(V.z*100)+'%';
+}
+const resetView=()=>{V.z=1;V.x=V.y=0;fit()};
+$('main').addEventListener('wheel',e=>{
+  if(!document.querySelector('.stage'))return;
+  e.preventDefault();
+  const r=$('main').getBoundingClientRect(),mx=e.clientX-r.left-V.base[0],my=e.clientY-r.top-V.base[1];
+  const z2=clamp(V.z*(e.deltaY<0?1.15:1/1.15),1,10),f=z2/V.z;
+  V.x=mx-(mx-V.x)*f;V.y=my-(my-V.y)*f;V.z=z2;
+  if(z2===1){V.x=V.y=0}
+  applyView();
+},{passive:false});
+addEventListener('resize',fit);
+
+// ---------- form helpers ----------
+function row(label,...kids){const l=el('label','f');l.append(el('span','',label),...kids);return l}
+function input(val,cb,attrs={}){const i=el('input');Object.assign(i,attrs);i.value=val??'';i.onchange=()=>cb(i.value);return i}
+function area(val,cb,rows=2){const t=el('textarea');t.rows=rows;t.value=val??'';t.dir='auto';t.onchange=()=>cb(t.value);return t}
+function pick(opts,val,cb){
+  const s=el('select');
+  for(const o of opts){const [v,t]=Array.isArray(o)?o:[o,o];const op=el('option','',t);op.value=v;s.append(op)}
+  s.value=val??'';s.onchange=()=>cb(s.value);return s;
+}
+function chk(val,cb,text){const l=el('label','chk');const c=el('input');c.type='checkbox';c.checked=!!val;c.onchange=()=>cb(c.checked);l.append(c,text);return l}
+const xbtn=cb=>{const b=el('button','x','✕');b.onclick=cb;return b};
+const sect=t=>el('h2','',t);
+
+function multi(list,cur,cb){
+  const box=el('div','multi');
+  if(!list.length)box.append(el('span','dim','(nothing to pick yet)'));
+  for(const [id,txt] of list){
+    box.append(chk(cur.includes(id),on=>cb(list.map(x=>x[0]).filter(i=>i===id?on:cur.includes(i))),txt));
+  }
+  return box;
+}
+
+function kvEditor(map,o2,cb){
+  const box=el('div','kv');
+  const ents=Object.entries(map||{});
+  const commit=()=>cb(Object.fromEntries(ents));
+  ents.forEach((e,i)=>{
+    const r=el('div','kvr');
+    let k;
+    if(o2.keys){
+      const ks=o2.keys.slice();
+      if(e[0]&&!ks.some(x=>x[0]===e[0]))ks.push([e[0],e[0]+' (missing)']);
+      k=pick([['','—'],...ks],e[0],v=>{e[0]=v;commit()});
+    }else k=input(e[0],v=>{e[0]=v.trim();commit()},{placeholder:o2.kph||''});
+    const v=input(e[1],x=>{e[1]=x;commit()},{placeholder:o2.vph||''});
+    if(o2.vlist)v.setAttribute('list',o2.vlist);
+    if(o2.vdir)v.dir='auto';
+    r.append(k,v,xbtn(()=>{ents.splice(i,1);commit()}));box.append(r);
   });
-  ov.onpointerdown=down;
+  const add=el('button','','+ add');
+  add.onclick=()=>{ents.push([o2.fresh?o2.fresh(map||{}):'',o2.def||'']);commit()};
+  box.append(add);return box;
 }
 
-let drag=null;
-function pt(e){const q=document.querySelector('.ov').getBoundingClientRect();return{x:(e.clientX-q.left)/q.width*100,y:(e.clientY-q.top)/q.height*100}}
-function down(e){
-  const ov=e.currentTarget,p=pt(e),b=e.target.closest('.box');
-  ov.setPointerCapture(e.pointerId);
-  if(b){const k=b.dataset.k;S.sel=k;drag={mode:e.target.classList.contains('hnd')?'size':'move',k,p,o:{...S.room.objects[k]}};
-    document.querySelectorAll('.box').forEach(x=>x.classList.toggle('sel',x.dataset.k===k));
-  }else{drag={mode:'draw',p};S.sel=null;document.querySelectorAll('.box').forEach(x=>x.classList.remove('sel'))}
-  ov.onpointermove=move;ov.onpointerup=up;
-}
-function move(e){
-  if(!drag)return;const p=pt(e),dx=p.x-drag.p.x,dy=p.y-drag.p.y;
-  if(drag.mode==='draw'){
-    let g=document.querySelector('.ghost');if(!g){g=el('div','ghost');e.currentTarget.append(g)}
-    g.style.cssText=`left:${Math.min(p.x,drag.p.x)}%;top:${Math.min(p.y,drag.p.y)}%;width:${Math.abs(dx)}%;height:${Math.abs(dy)}%`;return;
+function imgPick(val,cb,opt={}){
+  const w=el('div','imgpick');
+  const cur=imgPath(val),isL=!!val&&typeof val==='object';
+  const opts=[['','— none —'],...imgNames().sort().map(n=>[n,n])];
+  if(cur&&!opts.some(x=>x[0]===cur))opts.push([cur,cur+' (not loaded)']);
+  const s=pick(opts,cur,()=>{});
+  const geo=isL?Object.fromEntries(['x','y','w','h'].filter(f=>val[f]!==undefined).map(f=>[f,val[f]])):{};
+  const build=(p,layer,g)=>!p?'':layer?{image:p,...g}:p;
+  s.onchange=()=>cb(build(s.value,isL,geo));
+  w.append(s);
+  if(!opt.noLayer){
+    w.append(chk(isL,on=>cb(build(cur,on,on?geo:{})),'full-frame layer (not clipped to the click area)'));
+    if(isL){
+      const g=el('div','grid4');
+      ['x','y','w','h'].forEach(f=>g.append(input(val[f]??'',v=>{
+        const n=parseFloat(v),nv={...val};if(isNaN(n))delete nv[f];else nv[f]=n;cb(nv);
+      },{type:'number',step:'0.1',placeholder:f})));
+      w.append(g);
+    }
   }
-  const o=S.room.objects[drag.k];
-  if(drag.mode==='move'){o.x=r(clamp(drag.o.x+dx,0,100-o.w));o.y=r(clamp(drag.o.y+dy,0,100-o.h))}
-  else{o.w=r(clamp(drag.o.w+dx,1,100-o.x));o.h=r(clamp(drag.o.h+dy,1,100-o.y))}
-  place(drag.k);
+  return w;
 }
-function up(e){
-  const ov=e.currentTarget;ov.onpointermove=ov.onpointerup=null;
-  if(drag&&drag.mode==='draw'){
-    const p=pt(e),x=clamp(Math.min(p.x,drag.p.x),0,100),y=clamp(Math.min(p.y,drag.p.y),0,100);
-    const w=Math.min(Math.abs(p.x-drag.p.x),100-x),h=Math.min(Math.abs(p.y-drag.p.y),100-y);
-    if(w>1&&h>1){const k=uniq('obj');S.room.objects[k]={view:S.view,x:r(x),y:r(y),w:r(w),h:r(h),action:'examine'};S.sel=k}
+
+// ---------- structural edits ----------
+function removeObj(id){
+  const me=S.rid;
+  delete S.room.objects[id];
+  rewrite((rid,ref)=>{const [tr,to]=splitRef(rid,ref);return tr===me&&to===id?null:ref});
+  if(S.sel===id)S.sel=null;
+}
+function renameObj(old,nu){
+  const R=S.room,me=S.rid;
+  if(!nu||nu===old||R.objects[nu])return render();
+  const n={};for(const [a,b] of Object.entries(R.objects))n[a===old?nu:a]=b;
+  R.objects=n;
+  rewrite((rid,ref)=>{const [tr,to]=splitRef(rid,ref);return tr===me&&to===old?(rid===me?nu:me+'.'+nu):ref});
+  S.sel=nu;render();
+}
+function addObj(poly){
+  const k=uniq('obj');
+  const o={view:S.view,action:isHub()?'door':'examine',poly};sync(o);
+  S.room.objects[k]=o;S.sel=k;S.tool='select';render();
+}
+function addView(){
+  const n=(prompt('View name (e.g. main, corridor, box_open)')||'').trim();
+  if(!n||S.room.views[n])return;
+  S.room.views[n]={image:''};S.view=n;S.sel=null;render();
+}
+function renameView(old){
+  const R=S.room,n=(prompt('New view name',old)||'').trim();
+  if(!n||n===old||R.views[n])return;
+  const v={};for(const [a,b] of Object.entries(R.views))v[a===old?n:a]=b;R.views=v;
+  for(const o of Object.values(R.objects)){if(o.view===old)o.view=n;if(o.action==='goto'&&o.to===old)o.to=n}
+  if(R.start===old)R.start=n;
+  S.view=n;render();
+}
+function deleteView(k){
+  if(!confirm(`Delete view "${k}" and all its objects?`))return;
+  const R=S.room;
+  for(const id of Object.keys(R.objects))if(R.objects[id].view===k)removeObj(id);
+  delete R.views[k];
+  if(R.start===k)R.start='';
+  S.view=Object.keys(R.views)[0]||null;S.sel=null;render();
+}
+function renameItem(old,nu){
+  const R=S.room;
+  if(!nu||nu===old||R.items[nu])return render();
+  const n={};for(const [a,b] of Object.entries(R.items))n[a===old?nu:a]=b;R.items=n;
+  for(const o of Object.values(R.objects)){if(o.item===old)o.item=nu;if(o.accepts===old)o.accepts=nu}
+  render();
+}
+function addRoom(){
+  const k=(prompt('Room id (letters, digits, _), e.g. power')||'').trim();
+  if(!k)return;
+  if(!/^[A-Za-z_]\w*$/.test(k)||S.pack.rooms[k])return alert('Invalid or duplicate room id');
+  S.pack.rooms[k]=blankRoom();selectRoom(k);render();
+}
+function renameRoom(old){
+  const nu=(prompt('New room id',old)||'').trim();
+  if(!nu||nu===old)return;
+  if(!/^[A-Za-z_]\w*$/.test(nu)||S.pack.rooms[nu])return alert('Invalid or duplicate room id');
+  rewrite((rid,ref)=>{const [tr,to]=splitRef(rid,ref);if(tr!==old)return ref;return rid===old?to:nu+'.'+to});
+  for(const R of Object.values(S.pack.rooms))for(const o of Object.values(R.objects))if(o.action==='door'&&o.to===old)o.to=nu;
+  for(const v of Object.values(S.pack.variants))v.rooms=v.rooms.map(k=>k===old?nu:k);
+  const n={};for(const [a,b] of Object.entries(S.pack.rooms))n[a===old?nu:a]=b;
+  S.pack.rooms=n;S.rid=nu;render();
+}
+function deleteRoom(k){
+  if(k==='lobby'||!confirm(`Delete room "${k}"? Doors pointing to it will be flagged.`))return;
+  rewrite((rid,ref)=>splitRef(rid,ref)[0]===k?null:ref);
+  delete S.pack.rooms[k];
+  for(const v of Object.values(S.pack.variants))v.rooms=v.rooms.filter(x=>x!==k);
+  selectRoom('lobby');render();
+}
+
+// ---------- rendering ----------
+function render(){
+  renderTools();renderSetup();renderRooms();renderViews();renderItems();renderWin();renderVariants();
+  renderStage();renderObjs();renderProps();update();
+}
+function update(){renderCheck();renderOut();save()}
+function refreshSel(){drawOv();renderObjs();renderProps();update()}
+
+function renderTools(){
+  document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===S.tool));
+  $('hint').textContent=HINTS[S.tool]+'  ·  Wheel: zoom  ·  Space+drag: pan';
+  const ov=document.querySelector('.ov');if(ov)ov.classList.toggle('draw',S.tool!=='select');
+}
+function setTool(t){S.tool=t;S.draft=[];S.cursor=null;S.ghost=null;renderTools();drawOv()}
+
+function renderSetup(){
+  const R=S.room,P=S.pack;
+  $('pid').value=P.id||'';$('pname').value=P.name||'';$('ptheme').value=P.theme||'';$('pthemefa').value=P.theme_fa||'';
+  $('pmin').value=P.min_players;$('pmax').value=P.max_players;$('pintro').value=P.intro_fa||'';
+  $('pfx').value=S.prefix;
+  $('assetinfo').textContent=`${imgNames().length} images, ${audioNames().length} audio loaded`;
+  $('roomTitle').textContent='Room: '+S.rid+(isHub()?'  (hub: lobby + exit lock)':'');
+  $('rname').value=R.name_fa||'';$('rbg').value=R.bg||'';
+  $('rdigits').value=(R.digits||[]).join(', ');
+  $('digRow').hidden=isHub();
+  const st=$('rstart');st.replaceChildren();
+  [['','(first view)'],...Object.keys(R.views).map(v=>[v,v])].forEach(([v,t])=>{const o=el('option','',t);o.value=v;st.append(o)});
+  st.value=R.start||'';
+  $('showimgs').checked=S.showImgs;
+  $('audiolist').replaceChildren(...audioNames().map(n=>{const o=el('option');o.value=n;return o}));
+}
+
+function renderRooms(){
+  const box=$('rooms');box.replaceChildren();
+  for(const k of Object.keys(S.pack.rooms)){
+    const b=el('button',k===S.rid?'on':'',(k==='lobby'?'★ ':'')+k);
+    b.onclick=()=>{selectRoom(k);render()};box.append(b);
   }
-  drag=null;render();
+  const add=el('button','','+ room');add.onclick=addRoom;box.append(add);
+  $('roomActs').hidden=isHub();
+}
+
+function renderViews(){
+  const R=S.room,vs=$('views');vs.replaceChildren();
+  for(const k of Object.keys(R.views)){
+    const b=el('button',k===S.view?'on':'',k);
+    b.onclick=()=>{S.view=k;S.sel=null;S.draft=[];render()};vs.append(b);
+  }
+  const add=el('button','','+ view');add.onclick=addView;vs.append(add);
+  const vf=$('viewForm');vf.replaceChildren();
+  if(!S.view)return;
+  const v=R.views[S.view];
+  vf.append(row('View image',imgPick(v.image,val=>{v.image=imgPath(val);render()},{noLayer:true})));
+  const r=el('div','row');
+  const rn=el('button','','Rename');rn.onclick=()=>renameView(S.view);
+  const dl=el('button','danger','Delete view');dl.onclick=()=>deleteView(S.view);
+  r.append(rn,dl);vf.append(r);
+}
+
+function renderItems(){
+  const R=S.room,box=$('items');box.replaceChildren();
+  $('itemlist').replaceChildren(...Object.keys(R.items).map(k=>{const o=el('option');o.value=k;return o}));
+  for(const [k,def] of Object.entries(R.items)){
+    const d=el('div','card');
+    d.append(
+      row('Type id',input(k,v=>renameItem(k,v.trim()))),
+      row('Name',input(def.name||'',v=>{setProp(def,'name',v);update()},{dir:'auto'})),
+      row('Image',imgPick(def.image,val=>{setProp(def,'image',imgPath(val));render()},{noLayer:true})),
+      (()=>{const b=el('button','danger','Remove item');b.onclick=()=>{delete R.items[k];render()};return b})(),
+    );
+    box.append(d);
+  }
+  const add=el('button','','+ item');
+  add.onclick=()=>{const n=(prompt('Item type id (e.g. fuse)')||'').trim();if(!n||R.items[n])return;R.items[n]={name:n};render()};
+  box.append(add);
+}
+
+function renderWin(){
+  const R=S.room,box=$('win');box.replaceChildren();
+  if(isHub()){box.append(el('p','dim','Hub room: no win condition and no digits. It needs exactly one "lock" object.'));return}
+  const list=Object.entries(R.objects).map(([id,o])=>[id,`${id}  (${o.view})`]);
+  box.append(
+    row('All of these must be done',multi(list,R.win.requires,n=>{R.win.requires=n;render()})),
+    row('Win text',input(R.win.text||'',v=>{R.win.text=v;update()},{dir:'auto'})),
+  );
+}
+
+function renderVariants(){
+  const box=$('variants');box.replaceChildren();
+  const rooms=Object.keys(S.pack.rooms).filter(k=>k!=='lobby');
+  for(const n of CAPS){
+    const v=S.pack.variants[n];
+    const card=el('div','card');
+    card.append(chk(!!v,on=>{if(on)S.pack.variants[n]={rooms:[],minutes:10};else delete S.pack.variants[n];render()},`${n} players`));
+    if(v){
+      const total=v.rooms.reduce((s,k)=>s+((S.pack.rooms[k]||{}).digits||[]).length,0);
+      card.append(
+        row('Minutes',input(v.minutes,x=>{v.minutes=parseFloat(x)||0;update()},{type:'number',min:1})),
+        row('Active rooms',multi(rooms.map(k=>[k,`${k}  (${(S.pack.rooms[k].digits||[]).length} digit)`]),v.rooms,r=>{v.rooms=r;render()})),
+        el('p',total===n?'good':'dim',`Digits: ${total} / ${n}`),
+      );
+    }
+    box.append(card);
+  }
+}
+
+function renderStage(){
+  const m=$('main');m.replaceChildren();
+  const v=S.room.views[S.view];
+  if(!v){m.append(el('p','empty','Load your assets, then create a view in this room.'));return}
+  const url=imgUrl(v.image);
+  if(!url){m.append(el('p','empty','This view has no image yet (or the file is not loaded). Load assets and pick one in the Views section.'));return}
+  const st=el('div','stage'),im=el('img'),ov=el('div','ov');
+  const vk=S.rid+'|'+S.view+'|'+url;
+  if(V.key!==vk){V.key=vk;V.z=1;V.x=V.y=0}
+  if(ARC[url]){V.ar=ARC[url];st.dataset.ready='1'}
+  im.src=url;im.draggable=false;
+  im.onload=()=>{ARC[url]=im.naturalWidth/im.naturalHeight;V.ar=ARC[url];st.dataset.ready='1';fit()};
+  im.onerror=()=>{m.replaceChildren(el('p','empty','Image failed to load: '+v.image))};
+  ov.onpointerdown=onDown;ov.onpointermove=onMove;ov.onpointerup=onUp;ov.onpointercancel=onUp;
+  st.append(im,ov);m.append(st);
+  fit();drawOv();renderTools();
+}
+
+function drawOv(){
+  const ov=document.querySelector('.ov');if(!ov)return;
+  const pre=[],lab=[],hn=[];
+  const svg=document.createElementNS(NS,'svg');
+  svg.setAttribute('viewBox','0 0 100 100');svg.setAttribute('preserveAspectRatio','none');svg.setAttribute('class','sv');
+  const poly=(pts,cls,k)=>{
+    const g=document.createElementNS(NS,'polygon');
+    g.setAttribute('points',pts.map(p=>p.join(',')).join(' '));g.setAttribute('class',cls);
+    if(k)g.dataset.k=k;svg.append(g);
+  };
+  const list=objsOf(S.view).sort((a,b)=>(a[0]===S.sel)-(b[0]===S.sel));
+  for(const [k,o] of list){
+    if(S.showImgs&&o.image){
+      const u=imgUrl(o.image);
+      if(u){
+        const im=typeof o.image==='object'?o.image:null;
+        const g=im?{x:im.x??0,y:im.y??0,w:im.w??100,h:im.h??100}:o;
+        const i=el('img','prev');i.src=u;
+        i.style.cssText=`left:${g.x}%;top:${g.y}%;width:${g.w}%;height:${g.h}%`;pre.push(i);
+      }
+    }
+    poly(o.poly,'poly'+(k===S.sel?' sel':''),k);
+    const l=el('span','lbl',k);l.style.cssText=`left:${o.x}%;top:${o.y}%`;lab.push(l);
+  }
+  const cur=S.room.objects[S.sel];
+  if(cur&&cur.view===S.view&&S.tool==='select'){
+    cur.poly.forEach((p,i)=>{
+      const h=el('i','hnd');h.dataset.i=i;h.dataset.n=i+1;h.style.cssText=`left:${p[0]}%;top:${p[1]}%`;hn.push(h);
+    });
+  }
+  const pts=S.draft.concat(S.cursor&&S.draft.length?[S.cursor]:[]);
+  if(pts.length)poly(pts,'draftline');
+  S.draft.forEach((p,i)=>{
+    const h=el('i','hnd d');h.dataset.n=i+1;h.style.cssText=`left:${p[0]}%;top:${p[1]}%;pointer-events:none`;hn.push(h);
+  });
+  if(S.ghost){
+    const g=S.ghost,d=el('div','ghost');
+    d.style.cssText=`left:${Math.min(g[0],g[2])}%;top:${Math.min(g[1],g[3])}%;width:${Math.abs(g[2]-g[0])}%;height:${Math.abs(g[3]-g[1])}%`;
+    hn.push(d);
+  }
+  ov.replaceChildren(...pre,svg,...lab,...hn);
 }
 
 function renderObjs(){
-  const c=$('objs');c.innerHTML='';
-  objsOf(S.view).forEach(([k])=>{const b=el('button',k===S.sel?'on':'');b.textContent=k;b.onclick=()=>{S.sel=k;render()};c.append(b)});
-  if(!c.children.length)c.innerHTML='<p class="dim">با کشیدن روی تصویر یه شیء بساز.</p>';
+  const c=$('objs');c.replaceChildren();
+  const list=objsOf(S.view);
+  list.forEach(([k])=>{const b=el('button',k===S.sel?'on':'',k);b.onclick=()=>{S.sel=k;refreshSel()};c.append(b)});
+  if(!list.length)c.append(el('p','dim','No objects in this view yet.'));
 }
+
 function renderProps(){
-  const c=$('props');c.innerHTML='';const k=S.sel,o=S.room.objects[k];
-  if(!o){c.innerHTML='<p class="dim">یه شیء انتخاب کن.</p>';return}
-  const inp=(v,cb,a={})=>{const i=el('input');Object.assign(i,a);i.value=v;i.onchange=()=>cb(i.value);return i};
-  c.append(label('نام شیء',inp(k,v=>{
-    v=v.trim();if(!v||(v!==k&&S.room.objects[v]))return render();
-    const n={};for(const [a,b] of Object.entries(S.room.objects))n[a===k?v:a]=b;
-    S.room.objects=n;S.sel=v;render()})));
-  const vs=el('select');Object.keys(S.room.views).forEach(n=>{const op=el('option');op.value=op.textContent=n;vs.append(op)});
-  vs.value=o.view;vs.onchange=()=>{o.view=vs.value;S.view=o.view;render()};c.append(label('نما',vs));
-  const act=inp(o.action||'',v=>{o.action=v.trim();render()});act.setAttribute('list','acts');act.dir='ltr';c.append(label('عمل',act));
-  c.append(label('تصویر شیء',imgSelect(o.image,v=>{if(v)o.image=v;else delete o.image;render()})));
+  const c=$('props');c.replaceChildren();
+  const R=S.room,k=S.sel,o=R.objects[k];
+  if(!o){c.append(el('p','dim','Nothing selected. Pick the Quad or Rect tool and draw, or click a shape.'));return}
+  const views=Object.keys(R.views);
+  const refs=refList(k);
+  const set=(key,v)=>{setProp(o,key,v);update()};
+
+  c.append(row('Name',input(k,v=>renameObj(k,v.trim()))));
+  c.append(row('View',pick(views,o.view,v=>{o.view=v;S.view=v;render()})));
+  c.append(row('Action',pick(ACTIONS,o.action,v=>{o.action=v;delete o.to;render()})));
+
+  if(o.action==='goto')c.append(row('Target view (this room)',pick([['','—'],...views.map(v=>[v,v])],o.to||'',v=>{setProp(o,'to',v);render()})));
+  if(o.action==='door')c.append(row('Target room',pick([['','—'],...Object.keys(S.pack.rooms).map(v=>[v,v])],o.to||'',v=>{setProp(o,'to',v);render()})));
+  if(o.action==='show'){
+    c.append(row('Popup image (full screen, tap to close)',imgPick(o.popup,v=>{setProp(o,'popup',imgPath(v));render()},{noLayer:true})));
+    c.append(el('p','dim','Shown to the player who taps it. No other players are notified.'));
+  }
+  if(o.action==='lock')c.append(el('p','dim','Opens the exit lock keypad. The lobby needs exactly one.'));
+  if(o.action==='pickup'){const i=input(o.item||'',v=>set('item',v.trim()),{placeholder:'(default: object name)'});i.setAttribute('list','itemlist');c.append(row('Item type',i))}
+  if(o.action==='place'){const i=input(o.accepts||'',v=>set('accepts',v.trim()));i.setAttribute('list','itemlist');c.append(row('Accepts item type',i))}
+
+  c.append(sect('Shape'));
   const g=el('div','grid4');
-  ['x','y','w','h'].forEach(f=>g.append(label(f,inp(o[f],v=>{const n=parseFloat(v);if(!isNaN(n))o[f]=r(n);render()},{type:'number',step:'0.1'}))));
-  c.append(g);
-  const ex={};for(const a in o)if(!KNOWN.includes(a))ex[a]=o[a];
-  const ta=el('textarea');ta.rows=3;ta.value=Object.keys(ex).length?JSON.stringify(ex):'';ta.placeholder='{"requires":"fuse1"}';
-  ta.onchange=()=>{let n={};try{n=ta.value.trim()?JSON.parse(ta.value):{}}catch{ta.classList.add('bad');return}
-    ta.classList.remove('bad');for(const a of Object.keys(o))if(!KNOWN.includes(a))delete o[a];Object.assign(o,n);render()};
-  c.append(label('ویژگی‌های اضافه (JSON)',ta));
-  const d=el('button','danger');d.textContent='حذف شیء';d.onclick=()=>{delete S.room.objects[k];S.sel=null;render()};c.append(d);
+  o.poly.forEach((p,i)=>[0,1].forEach(j=>g.append(input(p[j],v=>{
+    const n=parseFloat(v);if(isNaN(n))return;
+    p[j]=r1(clamp(n,0,100));sync(o);refreshSel();
+  },{type:'number',step:'0.1',min:0,max:100,title:`P${i+1} ${j?'y':'x'}`}))));
+  c.append(row('Corners  P1x P1y P2x P2y / P3x P3y P4x P4y',g));
+  const rb=el('button','','Reset to rectangle (bounding box)');
+  rb.onclick=()=>{o.poly=rectPoly(o.x,o.y,o.w,o.h);sync(o);refreshSel()};
+  c.append(rb,el('p','dim',`Saved as ${isRect(o)?'a plain rectangle':'a quadrilateral (poly)'} · bbox x ${o.x} y ${o.y} w ${o.w} h ${o.h}`));
+
+  c.append(sect('Conditions (any room)'));
+  c.append(row('Requires: these must be done first',multi(refs,o.requires||[],n=>{o.requires=n;render()})));
+  c.append(row('On success, set objects (any room)',kvEditor(o.sets,{
+    keys:refs,def:'done',vlist:'statelist',
+    fresh:m=>(refs.find(x=>!(x[0] in m))||[''])[0],
+  },m=>{o.sets=m;render()})));
+  c.append(row('State of this object after success',(()=>{const i=input(o.setState||'',v=>set('setState',v.trim()),{placeholder:'(default)'});i.setAttribute('list','statelist');return i})()));
+  const flags=el('div','row');
+  flags.append(chk(o.decoy,on=>{set('decoy',on?true:'');},'decoy (always fails)'),chk(o.hidden,on=>{set('hidden',on?true:'')},'hidden at start'));
+  c.append(flags);
+
+  c.append(sect('Messages'));
+  c.append(row('Text (on success)',area(o.text,v=>set('text',v))));
+  c.append(row('Fail text (also shown by a locked door)',area(o.failText,v=>set('failText',v))));
+  c.append(row('Done text (when repeated)',area(o.doneText,v=>set('doneText',v))));
+  const a=input(o.audio||'',v=>set('audio',v.trim()));a.setAttribute('list','audiolist');
+  const pb=el('button','','▶');pb.onclick=()=>{const u=imgUrl(o.audio);if(u)new Audio(u).play()};
+  const aw=el('div','kvr2');aw.append(a,pb);
+  c.append(row('Audio',aw));
+
+  c.append(sect('Visuals'));
+  c.append(row('Base image (shown when no state image matches)',imgPick(o.image,v=>{setProp(o,'image',v);render()})));
+  const si=el('div','kv');
+  const ents=Object.entries(o.images||{});
+  const commit=()=>{o.images=Object.fromEntries(ents.filter(e=>e[0]));render()};
+  ents.forEach((e,i)=>{
+    const r=el('div','kvc');
+    const st=input(e[0],v=>{e[0]=v.trim();commit()},{placeholder:'state'});st.setAttribute('list','statelist');
+    r.append(st,imgPick(e[1],v=>{e[1]=v;commit()}),xbtn(()=>{ents.splice(i,1);commit()}));si.append(r);
+  });
+  const addSi=el('button','','+ state image');addSi.onclick=()=>{ents.push(['done','']);commit()};
+  si.append(addSi);
+  c.append(row('Images per state (idle / done / on / ...)',si));
+  c.append(row('Text label per state',kvEditor(o.labels,{kph:'state',vph:'label',def:'',fresh:()=>'on',vdir:true},m=>{o.labels=m;render()})));
+
+  c.append(sect('Advanced'));
+  const ex={};for(const a2 in o)if(!KEYS.includes(a2))ex[a2]=o[a2];
+  const ta=el('textarea');ta.rows=3;ta.value=Object.keys(ex).length?JSON.stringify(ex):'';
+  ta.placeholder='{"customKey":"value"}';
+  ta.onchange=()=>{
+    let n={};
+    try{n=ta.value.trim()?JSON.parse(ta.value):{}}catch{ta.classList.add('bad');return}
+    ta.classList.remove('bad');
+    for(const a2 of Object.keys(o))if(!KEYS.includes(a2))delete o[a2];
+    Object.assign(o,n);render();
+  };
+  c.append(row('Extra properties (raw JSON, unknown keys only)',ta));
+
+  const del=el('button','danger','Delete object');del.onclick=()=>{removeObj(k);render()};
+  c.append(del);
 }
 
-const key=k=>/^[A-Za-z_$][\w$]*$/.test(k)?k:JSON.stringify(k);
-function ord(o){const n={};KNOWN.forEach(a=>{if(o[a]!==undefined)n[a]=o[a]});for(const a in o)if(!(a in n))n[a]=o[a];return n}
+// ---------- validation (whole pack) ----------
+function usedAssets(){
+  const set=new Set();
+  const add=v=>{const p=imgPath(v);if(p)set.add(p)};
+  for(const R of Object.values(S.pack.rooms)){
+    for(const v of Object.values(R.views))add(v.image);
+    for(const it of Object.values(R.items))add(it.image);
+    for(const o of Object.values(R.objects)){add(o.image);add(o.popup);for(const x of Object.values(o.images||{}))add(x);add(o.audio)}
+  }
+  return [...set];
+}
+function problems(){
+  const P=[],add=(text,room,obj,warn)=>P.push({text,room,obj,warn});
+  const pk=S.pack,rooms=pk.rooms;
+  if(!pk.name)add('Pack needs a name');
+  if(!pk.theme)add('Pack needs a theme');
+  if(!(pk.min_players>=1&&pk.max_players>=pk.min_players))add('min / max players are invalid');
+  const refOk=(rid,ref)=>{const [tr,to]=splitRef(rid,ref);return !!(rooms[tr]&&rooms[tr].objects[to])};
+  for(const [rid,R] of Object.entries(rooms)){
+    const hub=rid==='lobby';
+    const vk=Object.keys(R.views);
+    if(!vk.length)add(`${rid}: no views`,rid);
+    for(const v of vk)if(!R.views[v].image)add(`${rid}: view "${v}" has no image`,rid);
+    if(R.start&&!R.views[R.start])add(`${rid}: start view "${R.start}" does not exist`,rid);
+    if(!hub&&(!R.digits.length||!R.digits.every(d=>Number.isInteger(d)&&d>=0&&d<=9)))add(`${rid}: digits must be integers 0-9 (at least one)`,rid);
+    for(const [id,o] of Object.entries(R.objects)){
+      const w=`${rid}.${id}`;
+      if(!R.views[o.view])add(`${w}: unknown view "${o.view}"`,rid,id);
+      if(!ACTIONS.includes(o.action))add(`${w}: unknown action "${o.action}"`,rid,id);
+      if(o.action==='goto'&&!R.views[o.to])add(`${w}: goto needs a target view`,rid,id);
+      if(o.action==='show'&&!o.popup)add(`${w}: show needs a popup image`,rid,id);
+      if(o.action==='door'){
+        if(!o.to)add(`${w}: door needs a target room`,rid,id);
+        else if(!rooms[o.to])add(`${w}: door to unknown room "${o.to}"`,rid,id);
+      }
+      if(o.action==='place'&&!o.decoy&&!o.accepts)add(`${w}: place needs "accepts"`,rid,id);
+      for(const r of o.requires||[])if(!refOk(rid,r))add(`${w}: requires unknown "${r}"`,rid,id);
+      for(const s of Object.keys(o.sets||{}))if(s&&!refOk(rid,s))add(`${w}: sets unknown "${s}"`,rid,id);
+      if(o.action==='pickup'&&!R.items[o.item||id])add(`${w}: item type "${o.item||id}" is not defined in Items`,rid,id,true);
+      if(o.action==='place'&&o.accepts&&!R.items[o.accepts])add(`${w}: accepted item "${o.accepts}" is not defined in Items`,rid,id,true);
+    }
+    if(hub){
+      const n=Object.values(R.objects).filter(o=>o.action==='lock').length;
+      if(n!==1)add(`lobby needs exactly one lock object (found ${n})`,rid);
+    }else{
+      if(!R.win.requires.length)add(`${rid}: win condition needs at least one object`,rid);
+      for(const r of R.win.requires)if(!R.objects[r])add(`${rid}: win requires unknown object "${r}"`,rid);
+    }
+  }
+  const vs=Object.entries(pk.variants);
+  if(!vs.length)add('Define at least one variant (team size)');
+  for(const [n,v] of vs){
+    const unk=v.rooms.filter(k=>!rooms[k]||k==='lobby');
+    if(unk.length){add(`Variant ${n}: unknown rooms ${unk.join(', ')}`);continue}
+    const total=v.rooms.reduce((s,k)=>s+rooms[k].digits.length,0);
+    if(total!==+n)add(`Variant ${n}: active rooms hold ${total} digits, the lock needs ${n}`);
+    if(!(v.minutes>0))add(`Variant ${n}: minutes must be > 0`);
+    if(+n<pk.min_players||+n>pk.max_players)add(`Variant ${n} is outside min/max players and will not be offered`,null,null,true);
+  }
+  const used=new Set(vs.flatMap(([,v])=>v.rooms));
+  for(const k of Object.keys(rooms))if(k!=='lobby'&&!used.has(k))add(`Room "${k}" is in no variant`,k,null,true);
+  if(Object.keys(S.files).length){
+    const miss=usedAssets().filter(p=>!imgUrl(p));
+    miss.slice(0,30).forEach(p=>add(`Asset not loaded: ${p}`,null,null,true));
+    if(miss.length>30)add(`...and ${miss.length-30} more assets not loaded`,null,null,true);
+  }
+  return P;
+}
+function jump(p){
+  if(!S.pack.rooms[p.room])return;
+  if(S.rid!==p.room)selectRoom(p.room);
+  const o=S.room.objects[p.obj];
+  if(o&&S.room.views[o.view])S.view=o.view;
+  S.sel=o?p.obj:null;render();
+}
+function renderCheck(){
+  const P=problems(),box=$('probs');box.replaceChildren();
+  $('probTitle').textContent=`Problems (${P.length})`;
+  if(!P.length){box.append(el('p','good','✓ Pack looks valid'));return}
+  for(const p of P){
+    const b=el('button','prob'+(p.warn?' warn':''),p.text);
+    if(p.room)b.onclick=()=>jump(p);
+    box.append(b);
+  }
+}
+
+// ---------- output ----------
+function cleanMap(m){
+  const n=Object.fromEntries(Object.entries(m).filter(([a,b])=>a&&b!==''&&b!==undefined&&b!==null));
+  return Object.keys(n).length?n:undefined;
+}
+function outObj(o){
+  const c={...o};
+  if(isRect(o))delete c.poly;
+  if(!(c.requires||[]).length)delete c.requires;
+  for(const f of ['sets','images','labels']){
+    if(c[f]){const m=cleanMap(c[f]);if(m)c[f]=m;else delete c[f]}
+  }
+  const n={};
+  for(const a of KEYS)if(c[a]!==undefined)n[a]=c[a];
+  for(const a in c)if(!(a in n))n[a]=c[a];
+  return n;
+}
+function fmtRoom(R,hub,pad){
+  const p=' '.repeat(pad),q=p+'  ';
+  const L=['{'];
+  const put=(k,v)=>L.push(`${q}${key(k)}: ${JSON.stringify(v)},`);
+  if(R.name_fa)put('name_fa',R.name_fa);
+  if(R.bg)put('bg',R.bg);
+  if(!hub)put('digits',R.digits);
+  if(R.start)put('start',R.start);
+  L.push(`${q}items: {`);
+  for(const [k,v] of Object.entries(R.items))L.push(`${q}  ${key(k)}: ${JSON.stringify(cleanMap(v)||{})},`);
+  L.push(`${q}},`);
+  if(!hub)put('win',{requires:R.win.requires,text:R.win.text||''});
+  L.push(`${q}views: {`);
+  for(const [k,v] of Object.entries(R.views))L.push(`${q}  ${key(k)}: ${JSON.stringify(v)},`);
+  L.push(`${q}},`,`${q}objects: {`);
+  for(const [k,v] of Object.entries(R.objects))L.push(`${q}  ${key(k)}: ${JSON.stringify(outObj(v))},`);
+  L.push(`${q}},`);
+  for(const a in R)if(!ROOM_KEYS.includes(a))put(a,R[a]);
+  L.push(p+'}');
+  return L.join('\n');
+}
 function out(){
-  const R=S.room,L=['export default {',`  id: ${JSON.stringify(R.id||'room')},`];
-  for(const a in R)if(!['id','views','objects'].includes(a))L.push(`  ${key(a)}: ${JSON.stringify(R[a])},`);
-  L.push('  views: {');for(const [k,v] of Object.entries(R.views))L.push(`    ${key(k)}: ${JSON.stringify(v)},`);
-  L.push('  },','  objects: {');for(const [k,v] of Object.entries(R.objects))L.push(`    ${key(k)}: ${JSON.stringify(ord(v))},`);
-  L.push('  },','};','');return L.join('\n');
+  const P=S.pack,L=['export default {'];
+  const put=(k,v)=>L.push(`  ${key(k)}: ${JSON.stringify(v)},`);
+  put('name',P.name);put('theme',P.theme);
+  if(P.theme_fa)put('theme_fa',P.theme_fa);
+  put('min_players',P.min_players);put('max_players',P.max_players);
+  if(P.intro_fa)put('intro_fa',P.intro_fa);
+  L.push('  lobby: '+fmtRoom(P.rooms.lobby,true,2)+',');
+  L.push('  rooms: {');
+  for(const [k,R] of Object.entries(P.rooms))if(k!=='lobby')L.push(`    ${key(k)}: ${fmtRoom(R,false,4)},`);
+  L.push('  },','  variants: {');
+  for(const [n,v] of Object.entries(P.variants))L.push(`    ${n}: ${JSON.stringify({rooms:v.rooms,minutes:v.minutes})},`);
+  L.push('  },','};','');
+  return L.join('\n');
 }
-function render(){renderTop();renderStage();renderObjs();renderProps();$('out').value=out();draft()}
+function renderOut(){$('out').value=out()}
 
-$('imgs').onchange=e=>{for(const f of e.target.files)S.files[f.name]=URL.createObjectURL(f);e.target.value='';render()};
-$('cfg').onchange=async e=>{
-  const f=e.target.files[0];e.target.value='';if(!f)return;
-  try{
-    const t=(await f.text()).replace(/^[\s\S]*?export\s+default/,'').trim().replace(/;$/,'');
-    const o=new Function('return ('+t+')')();
-    o.views=o.views||{};o.objects=o.objects||{};S.room=o;S.view=Object.keys(o.views)[0]||null;S.sel=null;render();
-  }catch(x){alert('فایل خونده نشد: '+x.message)}
-};
-$('rid').onchange=e=>{S.room.id=e.target.value.trim();render()};
-$('prefix').onchange=e=>{S.prefix=e.target.value.trim();render()};
-$('src').onchange=e=>{S.src=e.target.value.trim();render()};
-$('copy').onclick=async()=>{try{await navigator.clipboard.writeText($('out').value)}catch{$('out').select();document.execCommand('copy')}};
-$('dl').onclick=()=>{const a=el('a');a.href=URL.createObjectURL(new Blob([$('out').value],{type:'text/javascript'}));a.download=(S.room.id||'room')+'.js';a.click()};
-$('reset').onclick=()=>{if(!confirm('همه‌چیز پاک می‌شه. مطمئنی؟'))return;S.room={id:'room',views:{},objects:{}};S.view=null;S.sel=null;render()};
+// ---------- pointer interaction ----------
+let drag=null;
+function pt(e){
+  const q=document.querySelector('.ov').getBoundingClientRect();
+  return[clamp((e.clientX-q.left)/q.width*100,0,100),clamp((e.clientY-q.top)/q.height*100,0,100)];
+}
+function onDown(e){
+  if(e.button>0)return;
+  const ov=e.currentTarget;
+  if(V.space){
+    ov.setPointerCapture(e.pointerId);
+    drag={mode:'pan',sx:e.clientX,sy:e.clientY,ox:V.x,oy:V.y};return;
+  }
+  const p=pt(e),t=e.target;
+  if(S.tool==='quad'){
+    S.draft.push([r1(p[0]),r1(p[1])]);
+    if(S.draft.length===4){const poly=S.draft;S.draft=[];S.cursor=null;addObj(poly);return}
+    drawOv();return;
+  }
+  ov.setPointerCapture(e.pointerId);
+  if(S.tool==='rect'){drag={mode:'rect',p};S.ghost=[p[0],p[1],p[0],p[1]];return}
+  if(t.classList.contains('hnd')&&S.room.objects[S.sel]){drag={mode:'vtx',i:+t.dataset.i};return}
+  if(t.tagName==='polygon'&&t.dataset.k){
+    S.sel=t.dataset.k;
+    drag={mode:'move',p,orig:S.room.objects[S.sel].poly.map(a=>[...a])};
+    refreshSel();return;
+  }
+  if(S.sel){S.sel=null;refreshSel()}
+}
+function onMove(e){
+  if(drag&&drag.mode==='pan'){V.x=drag.ox+e.clientX-drag.sx;V.y=drag.oy+e.clientY-drag.sy;applyView();return}
+  const p=pt(e);
+  if(!drag){if(S.tool==='quad'&&S.draft.length){S.cursor=p;drawOv()}return}
+  if(drag.mode==='rect'){S.ghost=[drag.p[0],drag.p[1],p[0],p[1]];drawOv();return}
+  const o=S.room.objects[S.sel];if(!o)return;
+  if(drag.mode==='vtx'){o.poly[drag.i]=[r1(p[0]),r1(p[1])];sync(o);drawOv();return}
+  if(drag.mode==='move'){
+    const xs=drag.orig.map(a=>a[0]),ys=drag.orig.map(a=>a[1]);
+    const dx=clamp(p[0]-drag.p[0],-Math.min(...xs),100-Math.max(...xs));
+    const dy=clamp(p[1]-drag.p[1],-Math.min(...ys),100-Math.max(...ys));
+    o.poly=drag.orig.map(([x,y])=>[r1(x+dx),r1(y+dy)]);sync(o);drawOv();
+  }
+}
+function onUp(){
+  if(!drag)return;
+  const d=drag;drag=null;
+  if(d.mode==='pan')return;
+  if(d.mode==='rect'){
+    const g=S.ghost;S.ghost=null;
+    if(g){
+      const x=Math.min(g[0],g[2]),y=Math.min(g[1],g[3]),w=Math.abs(g[2]-g[0]),h=Math.abs(g[3]-g[1]);
+      if(w>1&&h>1){addObj(rectPoly(x,y,w,h));return}
+    }
+    drawOv();return;
+  }
+  refreshSel();
+}
+
 addEventListener('keydown',e=>{
-  if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName))return;
-  const o=S.room.objects[S.sel];if(!o)return;const st=e.shiftKey?1:.1;
-  if(e.key==='Delete'||e.key==='Backspace'){delete S.room.objects[S.sel];S.sel=null}
-  else if(e.key==='ArrowLeft')o.x=r(o.x-st);else if(e.key==='ArrowRight')o.x=r(o.x+st);
-  else if(e.key==='ArrowUp')o.y=r(o.y-st);else if(e.key==='ArrowDown')o.y=r(o.y+st);else return;
-  e.preventDefault();render();
+  const typing=INPUTS.includes(e.target.tagName);
+  if(e.code==='Space'&&!typing){
+    e.preventDefault();
+    if(!V.space){V.space=true;$('main').classList.add('pan')}
+    return;
+  }
+  if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key;
+  if(k==='Escape'){setTool('select');return}
+  if(k==='f'||k==='F'){resetView();return}
+  if(S.tool==='quad'&&k==='Backspace'&&S.draft.length){S.draft.pop();drawOv();e.preventDefault();return}
+  const t={v:'select',q:'quad',r:'rect'}[k.toLowerCase()];
+  if(t){setTool(t);return}
+  const o=S.room.objects[S.sel];if(!o)return;
+  if(k==='Delete'||k==='Backspace'){removeObj(S.sel);render();e.preventDefault();return}
+  const st=e.shiftKey?1:.1;
+  const d={ArrowLeft:[-st,0],ArrowRight:[st,0],ArrowUp:[0,-st],ArrowDown:[0,st]}[k];
+  if(!d)return;
+  const xs=o.poly.map(p=>p[0]),ys=o.poly.map(p=>p[1]);
+  const dx=clamp(d[0],-Math.min(...xs),100-Math.max(...xs)),dy=clamp(d[1],-Math.min(...ys),100-Math.max(...ys));
+  o.poly=o.poly.map(([x,y])=>[r1(x+dx),r1(y+dy)]);sync(o);
+  e.preventDefault();refreshSel();
 });
+addEventListener('keyup',e=>{
+  if(e.code!=='Space')return;
+  V.space=false;$('main').classList.remove('pan');
+  if(!INPUTS.includes(e.target.tagName))e.preventDefault();
+});
+addEventListener('blur',()=>{V.space=false;$('main').classList.remove('pan')});
+
+// ---------- static controls ----------
+const readJs=async f=>{
+  const t=(await f.text()).replace(/^[\s\S]*?export\s+default/,'').trim().replace(/;$/,'');
+  return new Function('return ('+t+')')();
+};
+function addAsset(path,f){const u=URL.createObjectURL(f);S.files[path]=u;S.byBase[base(path)]=u}
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>setTool(b.dataset.tool));
+$('fit').onclick=resetView;
+$('dir').onchange=e=>{
+  for(const f of e.target.files){
+    if(!(f.type.startsWith('image/')||isAudio(f.name)))continue;
+    addAsset(S.prefix+(f.webkitRelativePath||f.name).replace(/^public\//,''),f);
+  }
+  e.target.value='';render();
+};
+$('imgs').onchange=e=>{for(const f of e.target.files)addAsset(S.prefix+f.name,f);e.target.value='';render()};
+$('pfile').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{adoptPack(await readJs(f));render()}
+  catch(x){alert('Could not read pack file: '+x.message+'\n(Files with import lines cannot be opened; use "Import room files" for those.)')}
+};
+$('roomfiles').onchange=async e=>{
+  const files=[...e.target.files];e.target.value='';
+  for(const f of files){
+    try{
+      const o=await readJs(f);
+      const k=String(o.id||f.name.replace(/\.[^.]+$/,'')).replace(/[^\w]/g,'_');
+      if(S.pack.rooms[k]&&!confirm(`Replace room "${k}"?`))continue;
+      S.pack.rooms[k]=normRoom(o);selectRoom(k);
+    }catch(x){alert(f.name+': '+x.message)}
+  }
+  render();
+};
+$('pfx').onchange=e=>{S.prefix=e.target.value.trim();update()};
+$('pid').onchange=e=>{S.pack.id=e.target.value.trim().replace(/[^\w-]/g,'')||'pack';update()};
+[['pname','name'],['ptheme','theme'],['pthemefa','theme_fa'],['pintro','intro_fa']].forEach(([id,k])=>$(id).onchange=e=>{S.pack[k]=e.target.value;update()});
+$('pmin').onchange=e=>{S.pack.min_players=parseInt(e.target.value)||1;render()};
+$('pmax').onchange=e=>{S.pack.max_players=parseInt(e.target.value)||1;render()};
+$('rrename').onclick=()=>renameRoom(S.rid);
+$('rdel').onclick=()=>deleteRoom(S.rid);
+$('rname').onchange=e=>{S.room.name_fa=e.target.value;update()};
+$('rbg').onchange=e=>{S.room.bg=e.target.value.trim();update()};
+$('rdigits').onchange=e=>{S.room.digits=e.target.value.split(/[\s,]+/).filter(Boolean).map(Number);render()};
+$('rstart').onchange=e=>{S.room.start=e.target.value;update()};
+$('showimgs').onchange=e=>{S.showImgs=e.target.checked;drawOv()};
+$('copy').onclick=async()=>{try{await navigator.clipboard.writeText(out())}catch{$('out').select();document.execCommand('copy')}};
+$('dl').onclick=()=>{
+  const a=el('a');a.href=URL.createObjectURL(new Blob([out()],{type:'text/javascript'}));
+  a.download=(S.pack.id||'pack')+'.js';a.click();
+};
+$('reset').onclick=()=>{if(!confirm('The whole pack will be cleared. Continue?'))return;S.pack=blankPack();selectRoom('lobby');render()};
+
+// ---------- boot ----------
+try{
+  const d=JSON.parse(localStorage.getItem('packEditorDraft1')||'null');
+  if(d&&d.pack&&d.pack.rooms){
+    S.pack=Object.assign(blankPack(),d.pack);S.prefix=d.prefix||'';
+    S.pack.rooms.lobby=S.pack.rooms.lobby||blankRoom();
+    for(const k of Object.keys(S.pack.rooms))S.pack.rooms[k]=normRoom(S.pack.rooms[k]);
+    S.pack.variants=S.pack.variants||{};
+    selectRoom(S.pack.rooms[d.rid]?d.rid:'lobby');
+  }else selectRoom('lobby');
+}catch{S.pack=blankPack();selectRoom('lobby')}
 render();
 </script>
 </body>
