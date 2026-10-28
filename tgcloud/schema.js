@@ -9,9 +9,6 @@ export const users = table('users', {
   totalXp: integer('total_xp').notNull().default(0),
   matchesPlayed: integer('matches_played').notNull().default(0),
   matchesWon: integer('matches_won').notNull().default(0),
-  // Unused: the title is computed from XP by titleFor() in lib/users.js.
-  // Dropped on the next `npx tgcloud migrate`.
-  title: text('title').deprecated('unused; title is computed from total_xp'),
   createdAt: integer('created_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
 
@@ -77,12 +74,13 @@ export const matchEvents = table('match_events', {
 }));
 
 // Shared puzzle state of a running match (one row per match).
-// state = JSON of the whole game (see lib/engine.js initialGame). roomIndex/digits are unused.
+// state = JSON of the whole game (see lib/engine.js initialGame).
+// finished = JSON end screen written by lib/finish.js at conclude() (NULL until then) —
+// it lets still-polling clients receive the result instead of an error.
 export const gameState = table('game_state', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   matchId: integer('match_id').notNull().unique(),
-  roomIndex: integer('room_index').notNull().default(0),
   state: text('state').notNull(),
-  digits: text('digits').notNull().default('[]'),
+  finished: text('finished'),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });

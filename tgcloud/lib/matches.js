@@ -1,7 +1,7 @@
 import { db } from 'sdk';
 import { eq, and, inArray } from 'sdk/db';
 import { matches } from '../schema.js';
-import { first } from './util.js';
+import { first } from './core.js';
 
 export const getMatch = (id) => db.select().from(matches).where(eq(matches.id, id)).get();
 
@@ -23,6 +23,8 @@ export function setStatus(id, status) {
   if (status === 'running') set = { status, startedAt: new Date() };
   // Going back to registration (e.g. engine failed to start) clears the start time.
   else if (status === 'open' || status === 'full') set = { status, startedAt: null };
+  // Terminal states stamp finishedAt (used by reports; end-of-match logic lives in lib/finish.js).
+  else if (status === 'finished' || status === 'cancelled') set = { status, finishedAt: new Date() };
   return db.update(matches).set(set).where(eq(matches.id, id)).run();
 }
 
