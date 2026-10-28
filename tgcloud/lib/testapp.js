@@ -1,6 +1,6 @@
 import { api } from 'sdk';
 import { send } from './tg.js';
-import { MINIAPP_SHORT_NAME } from './config.js';
+import { MINIAPP_SHORT_NAME } from './gate.js';
 
 // TEMPORARY: connectivity test for opening the Mini App from a group.
 // Uses a direct t.me link (works in any chat); start_param allows [A-Za-z0-9_-], max 64 chars.
@@ -13,7 +13,7 @@ export async function testapp(msg) {
       '⚠️ <b>مینی‌اپ اصلی ربات تنظیم نشده</b>',
       'توی @BotFather: ربات ← Bot Settings ← Configure Mini App',
       'و آدرسی که <code>npx tgcloud push</code> چاپ کرد رو بده.',
-      'یا با /newapp یه مینی‌اپ بساز و short name رو توی <code>lib/config.js</code> بنویس.',
+      'یا با /newapp یه مینی‌اپ بساز و short name رو توی <code>lib/gate.js</code> بنویس.',
     ].join('\n'));
   }
 

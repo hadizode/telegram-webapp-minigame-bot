@@ -1,5 +1,5 @@
 import { db } from 'sdk';
-import { maybeSweep } from './cleanup.js';
+import { maybeSweep } from './core.js';
 
 const TTL_MS = 5 * 60 * 1000;
 export const fsmKey = (chatId, userId) => `newmatch:${chatId}:${userId}`;

@@ -1,7 +1,7 @@
 import { db } from 'sdk';
 import { eq, and, gt } from 'sdk/db';
 import { matches, matchPlayers } from '../schema.js';
-import { acquireLock } from './lock.js';
+import { acquireLock } from './core.js';
 import { setStatus } from './matches.js';
 import { refreshCard } from './cards.js';
 import { send, tryApi } from './tg.js';
