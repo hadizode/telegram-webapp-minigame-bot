@@ -1,7 +1,7 @@
 import { db } from 'sdk';
 import { eq, desc } from 'sdk/db';
 import { users } from '../schema.js';
-import { first } from './util.js';
+import { first } from './core.js';
 
 export function titleFor(xp) {
   if (xp <= 100) return 'تازه‌وارد';

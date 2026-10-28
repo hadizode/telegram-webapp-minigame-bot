@@ -1,5 +1,5 @@
-import { isChatAdmin } from './admin.js';
-import { acquireLock } from './lock.js';
+import { isChatAdmin } from './gate.js';
+import { acquireLock } from './core.js';
 import { send } from './tg.js';
 import { upsertUser } from './users.js';
 import { getMatch, setStatus } from './matches.js';

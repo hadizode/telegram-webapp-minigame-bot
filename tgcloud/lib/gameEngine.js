@@ -3,7 +3,7 @@ import { getMatch } from './matches.js';
 import { getPack } from './packLoader.js';
 import { send } from './tg.js';
 import { startGame } from './game.js';
-import { escapeHtml } from './util.js';
+import { escapeHtml } from './core.js';
 
 // Called by startMatch (/forcematch and the start button) after status = running.
 export async function onMatchStart(matchId) {

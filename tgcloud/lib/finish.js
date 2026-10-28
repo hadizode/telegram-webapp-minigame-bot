@@ -9,18 +9,18 @@
 import { db } from 'sdk';
 import { eq, and, asc, sql } from 'sdk/db';
 import { matchEvents, matchPlayers, users } from '../schema.js';
-import { acquireLock } from './lock.js';
+import { acquireLock } from './core.js';
 import { getMatch, setStatus } from './matches.js';
 import { getPack, getVariant } from './packLoader.js';
-import { getGame, saveGame } from './gameState.js';
+import { getGame, saveGame } from './core.js';
 import { buildSnapshot } from './snapshot.js';
 import { listActive } from './players.js';
 import { refreshCard } from './cards.js';
 import { send, tryApi } from './tg.js';
-import { escapeHtml } from './util.js';
+import { escapeHtml } from './core.js';
 
-const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
-export const faDigits = (str) => String(str).replace(/\d/g, (d) => FA_DIGITS[+d]);
+const FA = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
+export const faDigits = (str) => String(str).replace(/\d/g, (d) => FA[+d]);
 
 // Persian/French digits, spaces, dashes → plain ASCII digit string.
 export const parseCode = (raw) => {
@@ -28,7 +28,7 @@ export const parseCode = (raw) => {
   for (const ch of String(raw ?? '')) {
     if (ch >= '0' && ch <= '9') out += ch;
     else {
-      const i = FA_DIGITS.indexOf(ch);
+      const i = FA.indexOf(ch);
       if (i >= 0) out += i;
     }
   }
@@ -81,9 +81,12 @@ export function lockState(variantDigits, found, events, userId, now) {
   const slots = Array(len).fill(null);
   let myWrong = [];
   for (const e of events) {
-    // The keypad logs the whole submitted code in `digit`; a slot shows its first digit.
+    // The keypad logs the whole submitted code in `digit` and which lock cell it filled
+    // in `slot`. A correct code is a permutation of the digits, so each single-digit
+    // event fills its own cell (the cell order carries no meaning — any order wins).
     if (e.type === 'digit_ok' && e.slot !== null && e.slot !== undefined && e.slot < len && slots[e.slot] === null) {
-      slots[e.slot] = faDigits(String(Math.trunc((e.digit ?? 0) / 10 ** e.slot) % 10));
+      const s = String(e.digit ?? '');
+      slots[e.slot] = faDigits(s.length === 1 ? s : s.slice(-len));
     } else if (e.type === 'digit_wrong' && e.userId === userId) {
       myWrong.push(e.createdAt.getTime());
     }
@@ -138,7 +141,7 @@ async function conclude(match, won, reasonText) {
     `🔑 رمز قفل: <b>${escapeHtml(faDigits(digits))}</b>`,
     '',
     '🏆 <b>رتبه‌بندی</b>',
-    ...ranked.map((p) => `${FA_DIGITS[p.rank] ?? p.rank}. ${escapeHtml(p.name)} — +${p.score} XP`),
+    ...ranked.map((p) => `${FA[p.rank] ?? p.rank}. ${escapeHtml(p.name)} — +${p.score} XP`),
   ];
   await tryApi(() => send(match.groupId, lines.join('\n')), 'finish announce');
   await tryApi(() => refreshCard(match.id), 'finish card');

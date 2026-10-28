@@ -1,11 +1,11 @@
-import { rid, escapeHtml } from './util.js';
+import { rid, escapeHtml } from './core.js';
 import { send, editText, EMPTY_KB } from './tg.js';
 import { fsmKey, loadState, saveState, clearState } from './fsm.js';
 import { listPacks, getPack, getVariant } from './packLoader.js';
 import { validCapacities } from './capacity.js';
 import { createMatch, findOpenByGroup } from './matches.js';
 import { postMatchCard } from './cards.js';
-import { isChatAdmin } from './admin.js';
+import { isChatAdmin } from './gate.js';
 
 const kb = (rows) => ({ inline_keyboard: rows });
 const cancelBtn = (sid) => ({ text: '❌ انصراف', callback_data: `nm:cancel:${sid}` });

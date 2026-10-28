@@ -1,8 +1,8 @@
 import { api } from 'sdk';
 import { COMMANDS } from '../lib/commands.js';
 import { send, tryApi } from '../lib/tg.js';
-import { isChannelMember, JOIN_TEXT, joinKeyboard } from '../lib/channel.js';
-import { isAnonymousAdmin } from '../lib/admin.js';
+import { isChannelMember, JOIN_TEXT, joinKeyboard } from '../lib/gate.js';
+import { isAnonymousAdmin } from '../lib/gate.js';
 
 export default async function (message) {
   const PUBLIC = new Set(['start', 'help']);

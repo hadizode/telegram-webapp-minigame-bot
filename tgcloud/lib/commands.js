@@ -1,6 +1,6 @@
 import { api } from 'sdk';
-import { isAdminMessage, isGroup } from './admin.js';
-import { escapeHtml, formatDate } from './util.js';
+import { isAdminMessage, isGroup } from './gate.js';
+import { escapeHtml, formatDate } from './core.js';
 import { send, editText, EMPTY_KB } from './tg.js';
 import { upsertUser, getUserByTgId, topUsers, titleFor, nextTitle } from './users.js';
 import { findOpenByGroup, setStatus } from './matches.js';

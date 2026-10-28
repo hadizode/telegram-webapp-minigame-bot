@@ -1,10 +1,10 @@
 import { act, enter, ENTER_PREFIX, initialGame, isInteractive } from './engine.js';
-import { createGame, getGame, saveGame } from './gameState.js';
-import { acquireLock } from './lock.js';
+import { createGame, getGame, saveGame } from './core.js';
+import { acquireLock } from './core.js';
 import { getPack, getVariant } from './packLoader.js';
 import { activeInteractive, buildSnapshot } from './snapshot.js';
 import { send, tryApi } from './tg.js';
-import { escapeHtml } from './util.js';
+import { escapeHtml } from './core.js';
 
 async function locked(matchId, fn) {
   let release;

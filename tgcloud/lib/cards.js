@@ -1,5 +1,5 @@
 import { api } from 'sdk';
-import { escapeHtml } from './util.js';
+import { escapeHtml } from './core.js';
 import { send, editText, tryApi, EMPTY_KB } from './tg.js';
 import { getMatch, setMessageId } from './matches.js';
 import { listActive } from './players.js';

@@ -4,22 +4,44 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <title>اتاق فرار</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+<header>
+  <button id="back" hidden>↩ بازگشت</button>
+  <span id="title"></span>
+  <span id="timer">⏳ --:--</span>
+  <span id="digits"></span>
+</header>
 <main><div id="stage">در حال بارگذاری…</div></main>
 
-<div id="hud"><span id="title"></span><span id="digits"></span></div>
-<div id="toasts"></div>
+<div id="toast" hidden></div>
+<div id="log"></div>
 
-<div id="dock">
-  <button id="bag">🎒<b id="bagN" hidden></b></button>
-  <button id="selchip" hidden></button>
+<div id="end" hidden>
+  <h1 id="endTitle"></h1>
+  <p id="endSub"></p>
+  <p id="endCode"></p>
+  <ul id="endRanks"></ul>
 </div>
-<div id="invPanel" hidden><div id="inv"></div></div>
+
+<div id="keypad" hidden>
+  <div id="kpBox">
+    <p id="kpHint">رمز را وارد کنید</p>
+    <div id="kpSlots"></div>
+    <div id="kpFound"></div>
+    <div id="kpPad"></div>
+    <div id="kpRow">
+      <button id="kpDel">⌫</button>
+      <button id="kpOk">تأیید ✓</button>
+      <button id="kpClose">✕</button>
+    </div>
+    <p id="kpCd" hidden></p>
+  </div>
+</div>
 
 <div id="banner" hidden></div>
-<script src="game.js?v=3"></script>
+<script src="game.js?v=4"></script>
 </body>
 </html>

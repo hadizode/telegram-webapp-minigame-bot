@@ -3,7 +3,7 @@ import { handleWizard } from '../lib/wizard.js';
 import { handleMatchAction } from '../lib/matchActions.js';
 import { sendProfileByTgId } from '../lib/commands.js';
 import { tryApi } from '../lib/tg.js';
-import { isChannelMember, JOIN_TEXT } from '../lib/channel.js';
+import { isChannelMember, JOIN_TEXT } from '../lib/gate.js';
 
 const ROUTES = [
   [/^nm:(pack|cap|confirm|cancel|refresh):/, (c, d) => handleWizard(c, d.split(':'))],
