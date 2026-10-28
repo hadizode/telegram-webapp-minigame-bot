@@ -1,7 +1,8 @@
+import { act, enter, ENTER_PREFIX, initialGame, isInteractive } from './engine.js';
+import { createGame, getGame, saveGame } from './gameState.js';
 import { acquireLock } from './lock.js';
-import { getPack, getVariant, stripScene } from './packLoader.js';
-import { getGame, createGame, saveGame } from './gameState.js';
-import { initialGame, publicRoom, act, isInteractive } from './engine.js';
+import { getPack, getVariant } from './packLoader.js';
+import { activeInteractive, buildSnapshot } from './snapshot.js';
 import { send, tryApi } from './tg.js';
 import { escapeHtml } from './util.js';
 
@@ -19,47 +20,39 @@ export function startGame(match) {
   return createGame(match.id, initialGame(pack, activeRooms(pack, match)));
 }
 
-// What the Mini App sees: lobby + hotspot rooms (publicView-style), interactive rooms, shared inventory/log.
-// Rules, answers and digits of unsolved rooms never leave the server.
-export async function snapshot(match, user) {
+// What the Mini App sees: lobby + hotspot rooms, interactive rooms, shared inventory/log.
+// Rules, answers and digits of unsolved rooms never leave the server. (Pure part: lib/snapshot.js.)
+export async function snapshot(match) {
   const g = await getGame(match.id);
   if (!g) return null;
   const pack = getPack(match.packId);
-  const gs = JSON.parse(g.state);
-  const active = activeRooms(pack, match);
-  const scenes = { lobby: stripScene(pack.lobby, active) };
-  const rooms = {};
-  const found = [];
-  for (const id of active) {
-    const r = pack.rooms[id];
-    if (isInteractive(r)) {
-      rooms[id] = publicRoom(id, r, gs);
-      if (gs.done[id]) found.push(...r.digits);
-    } else {
-      scenes[id] = stripScene(r, active);
-    }
-  }
-  return { seq: gs.seq, name: pack.name, lockLength: match.maxPlayers, scenes, rooms, inv: (!Array.isArray(gs.inv) && gs.inv[user.id]) || [], log: gs.log, found };
+  return buildSnapshot(pack, activeRooms(pack, match), JSON.parse(g.state), match.maxPlayers);
 }
 
+// objectId '@enter:<view>' = "the player entered that view" (runs `enter` rules); anything else is a click.
 export const playerAct = (match, user, roomId, objectId, withItem) => locked(match.id, async () => {
   const g = await getGame(match.id);
   if (!g) return { result: { ok: false, text: '⚠️ بازی هنوز آماده نیست' } };
   const pack = getPack(match.packId);
   const room = pack.rooms[roomId];
-  if (!activeRooms(pack, match).includes(roomId) || !isInteractive(room)) {
+  const active = activeRooms(pack, match);
+  if (!active.includes(roomId) || !isInteractive(room)) {
     return { result: { ok: false, text: '🔎 این اتاق وجود نداره' } };
   }
   const gs = JSON.parse(g.state);
-  if (Array.isArray(gs.inv)) gs.inv = {};
-  if (gs.done[roomId]) return { result: { ok: true, text: '🏁 این اتاق حل شده' } };
+  const view = objectId.startsWith(ENTER_PREFIX) ? objectId.slice(ENTER_PREFIX.length) : null;
+  if (view === null && gs.done[roomId]) return { result: { ok: true, text: '🏁 این اتاق حل شده' } };
 
-  const result = act(room, roomId, gs, objectId, withItem, user.firstName || user.username || 'یکی از بازیکن‌ها', user.id);
-  if (!result.changed) return { result: { ok: result.ok, text: result.text, audio: result.audio } };
+  const rooms = activeInteractive(pack, active);
+  const by = user.firstName || user.username || 'یکی از بازیکن‌ها';
+  const r = view !== null ? enter(rooms, roomId, gs, view, by) : act(rooms, roomId, gs, objectId, withItem, by);
+  if (r.error) console.error('rules aborted:', r.error, roomId, objectId);
+  const result = { ok: r.ok, text: r.text, audio: r.audio, msgs: r.msgs, read: r.read, goto: r.goto };
+  if (!r.changed) return { result };
 
   await saveGame(match.id, { state: JSON.stringify(gs) });
-  if (result.solved) {
-    await tryApi(() => send(match.groupId, `🔓 اتاق «${escapeHtml(room.name_fa || roomId)}» حل شد!`), 'solved');
+  for (const rid of r.solvedRooms || []) {
+    await tryApi(() => send(match.groupId, `🔓 اتاق «${escapeHtml(pack.rooms[rid].name_fa || rid)}» حل شد!`), 'solved');
   }
-  return { result: { ok: true, text: result.text, audio: result.audio } };
+  return { result };
 });
