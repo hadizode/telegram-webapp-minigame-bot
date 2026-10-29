@@ -10,6 +10,12 @@ export const findOpenByGroup = (groupId) =>
     .where(and(eq(matches.groupId, groupId), inArray(matches.status, ['open', 'full'])))
     .get();
 
+// Used by /finish — the admin's manual end-of-match button.
+export const findRunningByGroup = (groupId) =>
+  db.select().from(matches)
+    .where(and(eq(matches.groupId, groupId), eq(matches.status, 'running')))
+    .get();
+
 export async function createMatch({ groupId, packId, maxPlayers, createdBy }) {
   const res = await db.insert(matches)
     .values({ groupId, packId, maxPlayers, createdBy })
