@@ -12,6 +12,7 @@ import { matchEvents, matchPlayers, users } from '../schema.js';
 import { acquireLock } from './core.js';
 import { getMatch, setStatus } from './matches.js';
 import { getPack, getVariant } from './packLoader.js';
+import { PACKS } from './packs/index.js';
 import { getGame, saveGame } from './core.js';
 import { buildSnapshot } from './snapshot.js';
 import { listActive } from './players.js';
@@ -118,8 +119,23 @@ async function writeResults(ranked, won) {
 }
 
 // Announce + end screen + DB close-out. Runs under the match lock, exactly once.
+// Every step is wrapped in try/catch: one failing Bot-API call (e.g. the bot was
+// removed from the group) must never abort the settlement or leave the match stuck.
 async function conclude(match, won, reasonText) {
-  const pack = getPack(match.packId);
+  // getPack() validates the whole pack and THROWS on an invalid one — a broken pack
+  // must not abort the settlement mid-way (match left stuck in 'running', /finish
+  // replies with an error and no match closes). Fall back to the raw registry.
+  let pack;
+  try { pack = getPack(match.packId); } catch (e) {
+    console.error('conclude: pack invalid, using raw registry', e.message);
+    pack = PACKS[match.packId];
+  }
+  if (!pack) {
+    // Pack deleted/renamed since the match started. Still settle the match — never
+    // leave it stuck in 'running' with /finish erroring out — minus the code reveal.
+    console.error('conclude: pack missing entirely', match.packId);
+    pack = { name: match.packId, theme: '?', rooms: {}, variants: {} };
+  }
   // listActive returns users (with usernames) ordered by join time, already joined
   // against match_players — we add the row ids from a parallel raw query.
   const rows = await db.select().from(matchPlayers)
@@ -135,10 +151,45 @@ async function conclude(match, won, reasonText) {
   await writeResults(ranked, won);
   await setStatus(match.id, 'finished');
 
-  const digits = getVariant(pack, match.maxPlayers).digits.join('');
+  // The variant may not cover this team size (pack edited after the match started);
+  // fall back to whatever digits exist rather than throwing out of the lock.
+  let digits;
+  try {
+    digits = getVariant(pack, match.maxPlayers).digits.join('');
+  } catch {
+    digits = (pack.variants?.[match.maxPlayers]?.rooms ?? Object.keys(pack.rooms))
+      .flatMap((r) => pack.rooms[r]?.digits ?? []).join('');
+  }
+  // Rooms whose puzzle was solved (or whose digits were revealed early) are shown even
+  // if the team never entered the code. Start from the full variant code and REPLACE
+  // each active room's slice with what was actually revealed — unsolved rooms' digits
+  // stay in the announcement (the team gets to see the whole answer when the match ends)
+  // and rooms outside the variant (pack edited mid-match) are appended. Never throws:
+  // no/corrupt game_state row → plain variant digits.
+  try {
+    const g = await getGame(match.id);
+    if (g?.state) {
+      const gs = JSON.parse(g.state);
+      const shown = new Set(gs.shown || []);
+      const activeRooms = pack.variants?.[match.maxPlayers]?.rooms ?? [];
+      const parts = activeRooms.map((id) => {
+        const dg = pack.rooms[id]?.digits;
+        if (!Array.isArray(dg)) return '';
+        return (gs.done?.[id] || shown.has(id)) ? dg.join('') : '';
+      });
+      let extra = '';
+      for (const id of Object.keys(pack.rooms || {})) {
+        if (activeRooms.includes(id)) continue;
+        if ((gs.done?.[id] || shown.has(id)) && Array.isArray(pack.rooms[id].digits)) {
+          extra += pack.rooms[id].digits.join('');
+        }
+      }
+      if (parts.some(Boolean) || extra) digits = parts.join('') + extra;
+    }
+  } catch { /* no usable game state — announce what the variant says */ }
   const lines = [
-    won ? '🎉 <b>فرار موفق!</b>' : '💀 <b>وقت تموم شد — فرار ناموفق</b>',
-    `🔑 رمز قفل: <b>${escapeHtml(faDigits(digits))}</b>`,
+    won ? '🎉 <b>فرار موفق!</b>' : (reasonText?.includes('ادمین') ? '⏹ <b>بازی توسط ادمین تمام شد</b>' : '💀 <b>وقت تموم شد — فرار ناموفق</b>'),
+    digits ? `🔑 رمز قفل: <b>${escapeHtml(faDigits(digits))}</b>` : '🔑 رمز قفل اعلام نمی‌شه (پک بازی مشکل داشت)',
     '',
     '🏆 <b>رتبه‌بندی</b>',
     ...ranked.map((p) => `${FA[p.rank] ?? p.rank}. ${escapeHtml(p.name)} — +${p.score} XP`),
@@ -153,7 +204,7 @@ async function conclude(match, won, reasonText) {
     digits: faDigits(digits),
     players: ranked.map((p) => ({ rank: p.rank, name: p.name, score: p.score })),
   };
-  await saveGame(match.id, { finished: JSON.stringify(end) });
+  await tryApi(() => saveGame(match.id, { finished: JSON.stringify(end) }), 'finish end screen');
   return end;
 }
 
@@ -163,13 +214,16 @@ export async function settle(match) {
   const g = await getGame(match.id);
   if (!g) return null;
   const started = match.startedAt ? new Date(match.startedAt).getTime() : 0;
-  const minutes = getVariant(getPack(match.packId), match.maxPlayers).minutes;
+  // Never let a pack/variant hiccup kill every poll: treat it as "not expired".
+  let minutes;
+  try { minutes = getVariant(getPack(match.packId), match.maxPlayers).minutes; }
+  catch { return null; }
   if (!started || Date.now() - started < minutes * 60_000) return null;
   let release;
   try { release = await acquireLock(`match:${match.id}`, 5000); } catch { return null; }
   try {
     const fresh = await getMatch(match.id);
-    if (fresh.status !== 'running') return null;
+    if (!fresh || fresh.status !== 'running') return null;
     return conclude(fresh, false, 'زمان بازی تمام شد.');
   } finally { await release(); }
 }
@@ -184,7 +238,7 @@ export async function finishMatch(match) {
   catch { return { ok: false, text: '⏳ یه لحظه صبر کن و دوباره بزن' }; }
   try {
     const fresh = await getMatch(match.id);
-    if (fresh.status !== 'running') {
+    if (!fresh || fresh.status !== 'running') {
       return { ok: false, text: '🔎 الان مچ در حال اجرایی توی این گروه نیست' };
     }
     const end = await conclude(fresh, false, 'بازی توسط ادمین تمام شد.');
@@ -206,7 +260,6 @@ export async function submitCode(match, user, rawCode) {
   // Cooldown lives on the whole TEAM (one shared lock): ≥3 wrong attempts by anyone
   // within the last minute → everyone waits until the oldest of them ages out.
   const allEvents = await db.select().from(matchEvents).where(eq(matchEvents.matchId, match.id)).all();
-  const st = lockState(variant.digits, [], allEvents, user.id, now);
   const myWrong = allEvents
     .filter((e) => e.type === 'digit_wrong')
     .map((e) => e.createdAt.getTime())
@@ -235,7 +288,10 @@ export async function submitCode(match, user, rawCode) {
       .values({
         matchId: match.id, userId: user.id,
         type: correct ? 'digit_ok' : 'digit_wrong',
-        digit: Number(code), slot, createdAt: new Date(),
+        // `slot` = the lock cell this code fills; `digit` = its LAST digit (the keypad
+        // renders one symbol per cell). The full code lives in the ranking events only
+        // through its digits — keep the column a single 0–9 integer.
+        digit: Number(code.slice(-1)), slot, createdAt: new Date(),
       }).run();
   } catch { /* lost the slot race — the attempt still counts as logged */ }
 
@@ -266,6 +322,17 @@ export async function submitCode(match, user, rawCode) {
 export async function snapshotWithEnd(match, user) {
   const g = await getGame(match.id);
   if (!g) return null;
+  // A finished match must ALWAYS deliver the end screen — even if the game_state write
+  // failed at conclude() time (e.g. bot kicked mid-settlement). Without this guard the
+  // client polls forever with no `end` and shows an error instead of the result.
+  // Never let a broken pack / variant kill the poll either: buildFinishedSnapshot
+  // tolerates both (empty digits), so players always get a result screen.
+  if (match.status !== 'running') {
+    let pack = null;
+    try { pack = getPack(match.packId); } catch { /* invalid pack — end screen without digits */ }
+    const snap = buildFinishedSnapshot(match, pack, g);
+    if (snap.end) return snap;
+  }
   const pack = getPack(match.packId);
   const variant = getVariant(pack, match.maxPlayers);
   const gs = JSON.parse(g.state);
@@ -279,4 +346,26 @@ export async function snapshotWithEnd(match, user) {
   const events = await db.select().from(matchEvents).where(eq(matchEvents.matchId, match.id)).all();
   snap.lock = lockState(variant.digits, snap.found, events, user.id, Date.now());
   return snap;
+}
+
+// End-screen-only snapshot for matches whose status is no longer 'running'. The digits
+// come from the event log / variant when available, never throwing on odd team sizes
+// or an invalid/missing pack (pack may be null).
+function buildFinishedSnapshot(match, pack, g) {
+  let end = null;
+  try {
+    if (g?.finished) end = JSON.parse(g.finished);
+  } catch { /* corrupt row → rebuild below */ }
+  if (!end) {
+    let digits = '';
+    try { digits = getVariant(pack, match.maxPlayers).digits.join(''); } catch { /* leave empty */ }
+    end = {
+      won: false,
+      title: '🏁 بازی تمام شد',
+      subtitle: '',
+      digits: faDigits(digits),
+      players: [],
+    };
+  }
+  return { end };
 }

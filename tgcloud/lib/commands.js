@@ -147,7 +147,14 @@ async function finish(msg) {
   const replyOptions = { reply_to_message_id: msg.message_id,};
   const match = await findRunningByGroup(msg.chat.id);
   if (!match) return send(msg.chat.id, '🔎 مچ در حال اجرایی وجود نداره (با /forcematch شروعش کن)',replyOptions);
-  const out = await finishMatch(match);
+  let out;
+  try {
+    out = await finishMatch(match);
+  } catch (e) {
+    console.error('finishMatch failed', e);
+    // The settlement threw (DB/API hiccup) — say so instead of the generic handler error.
+    return send(msg.chat.id, '⚠️ مچ بسته نشد؛ خطا توی ثبت نتیجه پیش اومد. دوباره امتحان کن.',replyOptions);
+  }
   if (!out.ok) return send(msg.chat.id, out.text,replyOptions);
   return send(msg.chat.id, '🏁 بازی تمام شد؛ نتیجه‌ها رو بالای همین پیام ببین',replyOptions);
 }
