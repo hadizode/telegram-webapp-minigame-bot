@@ -25,9 +25,4 @@ export default async function (message) {
     console.error('command failed', m[1], e);
     await tryApi(() => send(message.chat.id, '⚠️ مشکلی پیش اومد، دوباره امتحان کن'), 'error reply');
   }
-  if (!PUBLIC.has(m[1].toLowerCase()) &&
-  !isAnonymousAdmin(message) &&
-  !(await isChannelMember(message.from.id))) {
-    return await send(message.chat.id, JOIN_TEXT, { reply_markup: joinKeyboard() });
-  }
 }
