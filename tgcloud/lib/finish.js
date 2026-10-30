@@ -232,18 +232,42 @@ export async function settle(match) {
 // countdown or the exit code. Same lock + conclude path as the timer, so scoring,
 // the announcement and the Mini App end screen behave identically.
 // Returns { ok:true, end } on success, { ok:false, text } otherwise.
+// The lock is only held for the status check + flip to 'finished'; the slow part
+// (announcement, card refresh, end-screen write) runs OUTSIDE the lock. Otherwise a
+// player's concurrent poll could hit the 5s lock TTL, give up, and build a snapshot
+// of an already-'finished' match whose gs.finished row hasn't been written yet —
+// the client then shows an error while the match never appears closed.
 export async function finishMatch(match) {
+  // If a previous attempt died mid-settlement (crash between the status flip and the
+  // end-screen write), recover that match instead of refusing with "not running".
+  const pre = await getMatch(match.id);
+  if (pre && pre.status === 'finished') {
+    const g = await getGame(match.id);
+    if (!g?.finished) {
+      try { await conclude(pre, false, 'بازی توسط ادمین تمام شد.'); }
+      catch (e) { console.error('finishMatch recovery failed', e); return { ok: false, text: '⚠️ مچ بسته نشد؛ دوباره امتحان کن.' }; }
+      return { ok: true, end: null };
+    }
+  }
   let release;
   try { release = await acquireLock(`match:${match.id}`, 5000); }
   catch { return { ok: false, text: '⏳ یه لحظه صبر کن و دوباره بزن' }; }
+  let fresh;
   try {
-    const fresh = await getMatch(match.id);
+    fresh = await getMatch(match.id);
     if (!fresh || fresh.status !== 'running') {
+      await release(); release = null;
       return { ok: false, text: '🔎 الان مچ در حال اجرایی توی این گروه نیست' };
     }
+    await setStatus(match.id, 'finished');
+  } finally { if (release) await release(); }
+  try {
     const end = await conclude(fresh, false, 'بازی توسط ادمین تمام شد.');
     return { ok: true, end };
-  } finally { await release(); }
+  } catch (e) {
+    console.error('finishMatch conclude failed', e);
+    return { ok: false, text: '⚠️ مچ بسته نشد؛ خطا توی ثبت نتیجه پیش اومد. دوباره امتحان کن.' };
+  }
 }
 
 // The Mini App's exit-lock keypad. A correct submission must contain ALL the team's
@@ -333,12 +357,18 @@ export async function snapshotWithEnd(match, user) {
     const snap = buildFinishedSnapshot(match, pack, g);
     if (snap.end) return snap;
   }
-  const pack = getPack(match.packId);
-  const variant = getVariant(pack, match.maxPlayers);
-  const gs = JSON.parse(g.state);
+  let pack;
+  try { pack = getPack(match.packId); } catch { pack = PACKS[match.packId]; }
+  if (!pack) return buildFinishedSnapshot(match, null, g); // deleted pack: end screen beats a 500
+  let variant;
+  try { variant = getVariant(pack, match.maxPlayers); }
+  catch { variant = { rooms: Object.keys(pack.rooms || {}), minutes: 0, digits: [] }; }
+  let gs;
+  try { gs = JSON.parse(g.state); } catch { return buildFinishedSnapshot(match, pack, g); }
   const snap = buildSnapshot(pack, variant.rooms, gs, match.maxPlayers);
   if (g.finished) {
-    snap.end = JSON.parse(g.finished);
+    try { snap.end = JSON.parse(g.finished); }
+    catch { snap.end = buildFinishedSnapshot(match, pack, g).end; }
     return snap;
   }
   const started = match.startedAt ? new Date(match.startedAt).getTime() : Date.now();
