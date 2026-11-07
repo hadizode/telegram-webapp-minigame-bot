@@ -1,0 +1,28 @@
+{
+  "hash": "fe2ede4e2c22f80b5912c2ddd99318d1186b9f19a4dde111e82408ed7e8b4289",
+  "manifest": {
+    "game.js": {
+      "hash": "36fd989be12027e5ae425c13f28f8a1224cdf69280b888648ea7679f2e6a2d55",
+      "size": 13025
+    },
+    "index.html": {
+      "hash": "c22b76ca7ad1465018c3df41bbe44e19037b332916aea42d1f9a9d957530e402",
+      "size": 1217
+    },
+    "rooms/power/README.txt": {
+      "hash": "6edcbb62c1272fdd1c3fbb04d68533d87d6176dba9bf7e350e57d2cdcd70dc1f",
+      "size": 77
+    },
+    "style.css": {
+      "hash": "8e4fdd515ff974a3a1995d6a9d113d49578c59f65cac8a040c2f003d7953bd9f",
+      "size": 5478
+    }
+  },
+  "config": {
+    "spa": false,
+    "immutable": [],
+    "headers": [],
+    "redirects": []
+  },
+  "url": "https://app8820236966.tgcloud.ai/"
+}
