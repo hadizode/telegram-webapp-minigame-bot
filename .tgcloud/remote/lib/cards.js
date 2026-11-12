@@ -1,6 +1,6 @@
 import { api } from 'sdk';
 import { escapeHtml } from './core.js';
-import { send, editText, tryApi, EMPTY_KB } from './tg.js';
+import { sendRich, editRich, tryApi } from './tg.js';
 import { getMatch, setMessageId } from './matches.js';
 import { listActive } from './players.js';
 import { getPack } from './packLoader.js';
@@ -35,20 +35,12 @@ export function buildCard(match, pack, players) {
   ].join('\n');
 
   const leaveBtn = { text: '❌ خروج', callback_data: `match:leave:${match.id}` };
-  let reply_markup = EMPTY_KB;
-  if (match.status === 'open') {
-    reply_markup = { inline_keyboard: [[
-      { text: '🚪 ورود', callback_data: `match:join:${match.id}` },
-      leaveBtn,
-    ]] };
-  } else if (match.status === 'full') {
-    // Leaving a full match reopens registration (see matchActions.leave).
-    reply_markup = { inline_keyboard: [[
-      { text: '▶️ شروع بازی', callback_data: `match:start:${match.id}` },
-      leaveBtn,
-    ]] };
-  }
-  return { text, reply_markup };
+  const rows = match.status === 'open'
+    ? [[{ text: '🚪 ورود', callback_data: `match:join:${match.id}` }, leaveBtn]]
+    : match.status === 'full'
+      ? [[{ text: '▶️ شروع بازی', callback_data: `match:start:${match.id}` }, leaveBtn]]
+      : [];
+  return { text, rows };
 }
 
 export const pinCard = (match) =>
@@ -60,8 +52,8 @@ export const pinCard = (match) =>
 
 export async function postMatchCard(matchId) {
   const match = await getMatch(matchId);
-  const { text, reply_markup } = buildCard(match, getPack(match.packId), await listActive(matchId));
-  const msg = await send(match.groupId, text, { reply_markup });
+  const { text, rows } = buildCard(match, getPack(match.packId), await listActive(matchId));
+  const msg = await sendRich(match.groupId, richBlocks(text, rows));
   await setMessageId(matchId, msg.message_id);
   await pinCard({ ...match, messageId: msg.message_id });
 }
@@ -69,8 +61,13 @@ export async function postMatchCard(matchId) {
 export async function refreshCard(matchId) {
   const match = await getMatch(matchId);
   if (!match?.messageId) return;
-  const { text, reply_markup } = buildCard(match, getPack(match.packId), await listActive(matchId));
-  await editText(match.groupId, match.messageId, text, reply_markup);
+  const { text, rows } = buildCard(match, getPack(match.packId), await listActive(matchId));
+  try {
+    await editRich(match.groupId, match.messageId, richBlocks(text, rows));
+  } catch (e) {
+    // Rich-message edit may not be supported for this message/chat — fall back to plain text.
+    await send(match.groupId, text, { parse_mode: 'HTML' });
+  }
 }
 
 export const unpinCard = (match) =>

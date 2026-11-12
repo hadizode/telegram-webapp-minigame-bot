@@ -1,5 +1,5 @@
 import { api } from 'sdk';
-import { send } from './tg.js';
+import { sendRich } from './tg.js';
 import { MINIAPP_SHORT_NAME } from './gate.js';
 
 // TEMPORARY: connectivity test for opening the Mini App from a group.
@@ -22,8 +22,9 @@ export async function testapp(msg) {
     : `https://t.me/${me.username}`;
   const link = `${base}?startapp=test_${msg.chat.id}`;
   console.log('miniapp link', link);
-  return send(msg.chat.id, '🧪 <b>تست مینی‌اپ</b>\nروی دکمه بزن تا مینی‌اپ باز بشه', {
-    reply_to_message_id: msg.message_id,
-    reply_markup: { inline_keyboard: [[{ text: '🚀 باز کردن مینی‌اپ', url: link }]] },
+  return sendRich(msg.chat.id, richBlocks('🧪 <b>تست مینی‌اپ</b>\nروی دکمه بزن تا مینی‌اپ باز بشه', [[
+    { text: '🚀 باز کردن مینی‌اپ', url: link },
+  ]]), {
+    reply_parameters: { message_id: msg.message_id },
   });
 }

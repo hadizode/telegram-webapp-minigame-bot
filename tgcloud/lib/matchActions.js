@@ -21,9 +21,14 @@ export async function startMatch(match, notReadyText) {
     await setStatus(match.id, 'full');
     await refreshCard(match.id);
     await send(match.groupId, notReadyText);
+    return;
   }
-  await unpinCard(match);
-  await refreshCard(match.id);
+  try {
+    await unpinCard(match);
+  } catch { /* unpin failure is non-fatal */ }
+  try {
+    await refreshCard(match.id);
+  } catch { /* rich-message edit failure is non-fatal here */ }
 }
 
 // c = { chatId, from }

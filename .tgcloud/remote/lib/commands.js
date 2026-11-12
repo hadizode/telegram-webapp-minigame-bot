@@ -1,7 +1,7 @@
 import { api } from 'sdk';
 import { isAdminMessage, isGroup } from './gate.js';
 import { escapeHtml, formatDate } from './core.js';
-import { send, editText, EMPTY_KB } from './tg.js';
+import { send, editRich, richBlocks } from './tg.js';
 import { upsertUser, getUserByTgId, topUsers, titleFor, nextTitle } from './users.js';
 import { findOpenByGroup, findRunningByGroup, setStatus } from './matches.js';
 import { finishMatch } from './finish.js';
@@ -11,6 +11,7 @@ import { unpinCard } from './cards.js';
 import { startMatch } from './matchActions.js';
 import { begin } from './wizard.js';
 import { testapp } from './testapp.js';
+import { hokm } from './hokm.js';
 
 const LINE = '━━━━━━━━━━━━━━━━';
 
@@ -124,7 +125,7 @@ async function cancelmatch(msg) {
   const match = await findOpenByGroup(msg.chat.id);
   if (!match) return send(msg.chat.id, '🔎 الان مچ بازی توی این گروه نیست',replyOptions);
   await setStatus(match.id, 'cancelled');
-  if (match.messageId) await editText(match.groupId, match.messageId, '🚫 این مچ لغو شد', EMPTY_KB);
+  if (match.messageId) await editRich(match.groupId, match.messageId, richBlocks('🚫 این مچ لغو شد', []));
   await unpinCard(match);
   return send(msg.chat.id, '🚫 مچ لغو شد',replyOptions);
 }
@@ -160,9 +161,10 @@ async function finish(msg) {
 }
 
 export const COMMANDS = {
-  start, help, profile, ranklist,testapp,
+  start, help, profile, ranklist,testapp,hokm,
   newmatch: guard({ group: true, admin: true }, begin),
   cancelmatch: guard({ group: true, admin: true }, cancelmatch),
   forcematch: guard({ group: true, admin: true }, forcematch),
   finish: guard({ group: true, admin: true }, finish),
+  play:hokm,
 };
