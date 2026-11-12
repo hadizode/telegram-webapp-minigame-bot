@@ -1,5 +1,5 @@
 {
-  // The Mini App front-end is plain files in public/ (no build step).
-  "static": { "source": "public" },
+  // The Mini App front-end is the built scene-editor play output in app/.
+  "static": { "source": "app" },
   "$schema": "./node_modules/@tgcloud/cli/schema/tgcloud.json"
 }

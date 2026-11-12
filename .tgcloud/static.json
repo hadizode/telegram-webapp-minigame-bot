@@ -1,21 +1,17 @@
 {
-  "hash": "fe2ede4e2c22f80b5912c2ddd99318d1186b9f19a4dde111e82408ed7e8b4289",
+  "hash": "cae64e86bbdae06c485c43b753eaf4d5586875c30f802106374d9986fd47163e",
   "manifest": {
-    "game.js": {
-      "hash": "36fd989be12027e5ae425c13f28f8a1224cdf69280b888648ea7679f2e6a2d55",
-      "size": 13025
+    "assets/index-BN_p832E.css": {
+      "hash": "e746d04eecf52f8f951a66c25acc2a9ce7ac37339bf333e66fc900d393580af2",
+      "size": 46589
+    },
+    "assets/index-BwaE6izw.js": {
+      "hash": "8572c4c74d91035f0afd780a3e070068e29954b12dd76ccdc258af6f35f6856a",
+      "size": 535907
     },
     "index.html": {
-      "hash": "c22b76ca7ad1465018c3df41bbe44e19037b332916aea42d1f9a9d957530e402",
-      "size": 1217
-    },
-    "rooms/power/README.txt": {
-      "hash": "6edcbb62c1272fdd1c3fbb04d68533d87d6176dba9bf7e350e57d2cdcd70dc1f",
-      "size": 77
-    },
-    "style.css": {
-      "hash": "8e4fdd515ff974a3a1995d6a9d113d49578c59f65cac8a040c2f003d7953bd9f",
-      "size": 5478
+      "hash": "f6550ca2d2378e1dc0ceddeea9172c98e61908ec2804d215c73f8fd5e1ef9d6e",
+      "size": 862
     }
   },
   "config": {
