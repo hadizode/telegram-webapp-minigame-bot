@@ -1,10 +1,8 @@
 import { api } from 'sdk';
 import { COMMANDS } from '../lib/commands.js';
-import { send, sendRich, tryApi } from '../lib/tg.js';
-import { richBlocks } from '../lib/tg.js';
+import { send, tryApi } from '../lib/tg.js';
 import { isChannelMember, JOIN_TEXT, joinKeyboard } from '../lib/gate.js';
 import { isAnonymousAdmin } from '../lib/gate.js';
-
 
 export default async function (message) {
   const PUBLIC = new Set(['start', 'help']);
@@ -20,19 +18,11 @@ export default async function (message) {
       if (me.username.toLowerCase() !== m[2].toLowerCase()) return;
     }
     if (!isAnonymousAdmin(message) && !(await isChannelMember(message.from.id))) {
-      return await sendRich(message.chat.id, richBlocks(JOIN_TEXT, [joinKeyboard()]));
+      return await send(message.chat.id, JOIN_TEXT, { reply_markup: joinKeyboard() });
     }
     await cmd(message);
-  }catch (e) {
+  } catch (e) {
     console.error('command failed', m[1], e);
-    const detail = String((e && (e.description || e.message)) || e).slice(0, 300);
-    await tryApi(() => send(message.chat.id, '⚠️ ' + detail), 'error reply');
+    await tryApi(() => send(message.chat.id, '⚠️ مشکلی پیش اومد، دوباره امتحان کن'), 'error reply');
   }
-
-  try {
-    const res = await fetch(WIDGET_URL);
-    if (!res.ok) throw new Error('widget fetch failed: ' + res.status);
-    await res.text();
-  } catch { /* widget fetch is non-fatal */ }
-
 }

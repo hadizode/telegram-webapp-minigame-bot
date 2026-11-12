@@ -25,9 +25,9 @@ export async function isChannelMember(userId) {
 }
 
 export const JOIN_TEXT = '📢 برای استفاده از ربات اول باید عضو کانال ما بشی، بعد دوباره امتحان کن';
-// One button row: channel join (url button). Consumed by handlers/message.js
-// as one row of a rich-message buttons block.
-export const joinKeyboard = () => [{ text: '📢 عضویت در کانال', url: CHANNEL_URL }];
+export const joinKeyboard = () => ({
+  inline_keyboard: [[{ text: '📢 عضویت در کانال', url: CHANNEL_URL }]],
+});
 
 // ---- admins -------------------------------------------------------------------------------------
 // True if the user is creator/administrator of the chat.

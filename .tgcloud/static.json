@@ -1,17 +1,9 @@
 {
-  "hash": "b3ee5786760995bdb2a7cce1b1aadb5dc7b09f95f3efed3ef47ac40b97f20953",
+  "hash": "fe2ede4e2c22f80b5912c2ddd99318d1186b9f19a4dde111e82408ed7e8b4289",
   "manifest": {
-    "bkp.txt": {
-      "hash": "d8590bdf87e6041b6f5c469c72a9b9deece18e8ab192825ac0e8e157ab5404dc",
-      "size": 25908
-    },
     "game.js": {
       "hash": "36fd989be12027e5ae425c13f28f8a1224cdf69280b888648ea7679f2e6a2d55",
       "size": 13025
-    },
-    "hokm-widget.html": {
-      "hash": "778422ae5f95becc7b4ccbffc38d9794071f2bb6acf9d78b84d23215ffccef2c",
-      "size": 9132
     },
     "index.html": {
       "hash": "c22b76ca7ad1465018c3df41bbe44e19037b332916aea42d1f9a9d957530e402",
