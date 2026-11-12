@@ -1,54 +1,62 @@
 import { api } from 'sdk';
 import { escapeHtml } from './core.js';
-import { send, editText, tryApi, EMPTY_KB } from './tg.js';
+import { sendRich, editRich, tryApi } from './tg.js';
 import { getMatch, setMessageId } from './matches.js';
 import { listActive } from './players.js';
 import { getPack } from './packLoader.js';
+import { btn, row } from './rich.js';
 
-const statusFa = (s, joined, max) => ({
-  open: `🟡 در انتظار بازیکن (${joined}/${max})`,
+const statusFa = (s) => ({
+  open: '🟡 در انتظار بازیکن',
   full: '🟢 همه حاضرن — منتظر شروع',
   running: '🎮 در حال بازی',
   finished: '🏁 تموم شد',
   cancelled: '🚫 لغو شد',
 })[s];
 
-const name = (p) => (p.username ? `@${escapeHtml(p.username)}` : escapeHtml(p.firstName));
+const name = (p) =>
+  p.username ? `@${escapeHtml(p.username)}` : escapeHtml(p.firstName);
 
+// ساخت HTML کارت + دکمه‌های ریچ
 export function buildCard(match, pack, players) {
   const joined = players.length;
-  const list = joined ? players.map((p, i) => `${i + 1}. ${name(p)}`).join('\n') : 'هنوز کسی جوین نشده';
-  const text = [
-    `🏥 <b>${escapeHtml(pack.name)}</b>`,
-    '━━━━━━━━━━━━━━',
-    `🎭 تم: ${escapeHtml(pack.theme_fa || pack.theme)}`,
-    `👥 ظرفیت: <b>${joined}/${match.maxPlayers}</b>`,
-    `⏳ وضعیت: ${statusFa(match.status, joined, match.maxPlayers)}`,
-    '',
-    '📌 <b>قبل از شروع</b>',
-    `• حداقل ${pack.min_players} نفر لازمه`,
-    '• یه وویس کال بزنید یا همین‌جا چت کنید',
-    '• اولین کسی که کد درست رو بزنه، رتبه ۱ می‌شه',
-    '',
-    '🧑‍🤝‍🧑 <b>بازیکن‌ها</b>',
-    list,
+
+  const listItems = joined
+    ? players.map((p) => `<li>${name(p)}</li>`).join('')
+    : '<li><i>هنوز کسی جوین نشده</i></li>';
+
+  const html = [
+    `<h2>🏥 ${escapeHtml(pack.name)}</h2>`,
+    '<hr>',
+    `<p>🎭 تم: ${escapeHtml(pack.theme_fa || pack.theme)}</p>`,
+    `<p>👥 ظرفیت: <b>${joined}/${match.maxPlayers}</b></p>`,
+    `<p>⏳ وضعیت: ${statusFa(match.status)}</p>`,
+    '<p><b>📌 قبل از شروع</b></p>',
+    '<ul>',
+    `<li>حداقل ${pack.min_players} نفر لازمه</li>`,
+    '<li>یه وویس کال بزنید یا همین‌جا چت کنید</li>',
+    '<li>اولین کسی که کد درست رو بزنه، رتبه ۱ می‌شه</li>',
+    '</ul>',
+    '<p><b>🧑‍🤝‍🧑 بازیکن‌ها</b></p>',
+    `<ul>${listItems}</ul>`,
   ].join('\n');
 
-  const leaveBtn = { text: '❌ خروج', callback_data: `match:leave:${match.id}` };
-  let reply_markup = EMPTY_KB;
+  const leaveBtn = btn('❌ خروج', `match:leave:${match.id}`, 'danger');
+
+  let actions = '';
   if (match.status === 'open') {
-    reply_markup = { inline_keyboard: [[
-      { text: '🚪 ورود', callback_data: `match:join:${match.id}` },
+    actions = row([
+      btn('🚪 ورود', `match:join:${match.id}`, 'success'),
       leaveBtn,
-    ]] };
+    ]);
   } else if (match.status === 'full') {
-    // Leaving a full match reopens registration (see matchActions.leave).
-    reply_markup = { inline_keyboard: [[
-      { text: '▶️ شروع بازی', callback_data: `match:start:${match.id}` },
+    actions = row([
+      btn('▶️ شروع بازی', `match:start:${match.id}`, 'primary'),
       leaveBtn,
-    ]] };
+    ]);
   }
-  return { text, reply_markup };
+
+  return { html: actions ? `${html}\n${actions}` : html };
 }
 
 export const pinCard = (match) =>
@@ -60,8 +68,9 @@ export const pinCard = (match) =>
 
 export async function postMatchCard(matchId) {
   const match = await getMatch(matchId);
-  const { text, reply_markup } = buildCard(match, getPack(match.packId), await listActive(matchId));
-  const msg = await send(match.groupId, text, { reply_markup });
+  const { html } = buildCard(match, getPack(match.packId), await listActive(matchId));
+
+  const msg = await sendRich(match.groupId, html);
   await setMessageId(matchId, msg.message_id);
   await pinCard({ ...match, messageId: msg.message_id });
 }
@@ -69,8 +78,9 @@ export async function postMatchCard(matchId) {
 export async function refreshCard(matchId) {
   const match = await getMatch(matchId);
   if (!match?.messageId) return;
-  const { text, reply_markup } = buildCard(match, getPack(match.packId), await listActive(matchId));
-  await editText(match.groupId, match.messageId, text, reply_markup);
+
+  const { html } = buildCard(match, getPack(match.packId), await listActive(matchId));
+  await editRich(match.groupId, match.messageId, html);
 }
 
 export const unpinCard = (match) =>
