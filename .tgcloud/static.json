@@ -1,17 +1,21 @@
 {
-  "hash": "cae64e86bbdae06c485c43b753eaf4d5586875c30f802106374d9986fd47163e",
+  "hash": "99c055f3d9f07b745c5f667bd3c06590cbb4a807cb15d922a7393f542cf5f91f",
   "manifest": {
     "assets/index-BN_p832E.css": {
       "hash": "e746d04eecf52f8f951a66c25acc2a9ce7ac37339bf333e66fc900d393580af2",
       "size": 46589
     },
     "assets/index-BwaE6izw.js": {
-      "hash": "8572c4c74d91035f0afd780a3e070068e29954b12dd76ccdc258af6f35f6856a",
-      "size": 535907
+      "hash": "51a3c8086861c820b9556f1f3438070d354c3ba678d8434936b5694cf8dc2964",
+      "size": 535906
     },
     "index.html": {
       "hash": "f6550ca2d2378e1dc0ceddeea9172c98e61908ec2804d215c73f8fd5e1ef9d6e",
       "size": 862
+    },
+    "project.json": {
+      "hash": "f6f25401d4b4982bcac31a5279b8705452775c1f2718ac78693f467d217e937d",
+      "size": 7083625
     }
   },
   "config": {
