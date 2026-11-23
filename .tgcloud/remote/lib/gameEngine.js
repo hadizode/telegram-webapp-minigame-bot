@@ -16,10 +16,10 @@ export async function onMatchStart(matchId) {
   const lobbyUrl = `https://t.me/${me.username}?startapp=m${matchId}&mode=fullscreen`;
 
   const html = [
-    '<h2>🔐 بازی شروع شد!</h2>',
+    '<h2>⚡️ مچ شروع شد!</h2>',
     '<hr>',
     `<p>${escapeHtml(pack.intro_fa || 'وارد لابی بشید، اتاق‌ها رو بگردید و رقم‌های قفل خروج رو پیدا کنید.')}</p>`,
-    row([urlBtn('🚪 ورود به لابی', lobbyUrl, 'success')]),
+    row([urlBtn('🗝ورود به بازی', lobbyUrl, 'success')]),
   ].join('\n');
 
   await sendRich(match.groupId, html);

@@ -1,21 +1,33 @@
 {
-  "hash": "99c055f3d9f07b745c5f667bd3c06590cbb4a807cb15d922a7393f542cf5f91f",
+  "hash": "e3151dad1ab3602dbf622d179303e54b90deadca43a7d5b8203b9da8e0cf23df",
   "manifest": {
-    "assets/index-BN_p832E.css": {
-      "hash": "e746d04eecf52f8f951a66c25acc2a9ce7ac37339bf333e66fc900d393580af2",
-      "size": 46589
+    "assets/2d82b92e720462f8dd3b-Bh4Fahcw.svg": {
+      "hash": "eb74d2c88b8f1308ae1523cb8c1b8ee8ec8fa72e48fa280e298c85cd3ea848d2",
+      "size": 18011
     },
-    "assets/index-BwaE6izw.js": {
-      "hash": "51a3c8086861c820b9556f1f3438070d354c3ba678d8434936b5694cf8dc2964",
-      "size": 535906
+    "assets/index-DYdltBaT.css": {
+      "hash": "fcf3da7a96ab333060cb2e7e54a6b55ce75b7fa798299010fea918b4912cede1",
+      "size": 97785
+    },
+    "assets/index-D_kKuY_1.js": {
+      "hash": "489a1bc307ba5edbf83ca2071e9f2914762dfd8d8f5932d1de15217bfaee02dc",
+      "size": 597413
     },
     "index.html": {
-      "hash": "f6550ca2d2378e1dc0ceddeea9172c98e61908ec2804d215c73f8fd5e1ef9d6e",
-      "size": 862
+      "hash": "449ff671654facd27d4278f75d8351ba22a759f9713a9d0f4dfb1db8bb5afc5e",
+      "size": 931
     },
-    "project.json": {
-      "hash": "f6f25401d4b4982bcac31a5279b8705452775c1f2718ac78693f467d217e937d",
-      "size": 7083625
+    "play/assets.6126a3a5ea.json": {
+      "hash": "8ef97a1b5c40cf5b14d5005873ca8ba5aa3782485c3de2e7adf9e10abf67fbd5",
+      "size": 5834878
+    },
+    "play/project.json": {
+      "hash": "c7438ef2a356c0f8dbc9572b939d110ff28bde3b0535b383d651dc59f78e0107",
+      "size": 75575
+    },
+    "stkrs/AnimatedSticker.tgs": {
+      "hash": "586fc0476dae119daf4b4f228dc04e2ba003d9e1b818d065261f2b177fa71741",
+      "size": 34608
     }
   },
   "config": {
